@@ -1,0 +1,8 @@
+{
+  "name": "Proyecto-mobiles",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular",
+  "id": "a531acb6"
+}
