@@ -1,17 +1,31 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
-    <ion-title>
-      Tab 1
-    </ion-title>
+    <ion-title>Página de Inicio</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
+  <!-- Header collapsable que se ajusta cuando se hace scroll -->
   <ion-header collapse="condense">
     <ion-toolbar>
-      <ion-title size="large">Tab 1</ion-title>
+      <ion-title size="large">Bienvenido(a)</ion-title>
     </ion-toolbar>
   </ion-header>
 
-  <app-explore-container name="Tab 1 page"></app-explore-container>
-</ion-content>
+  <!-- Contenedor principal de la página -->
+  <div class="ion-padding">
+    <!-- Sección de bienvenida o información principal -->
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Bienvenido a RegistrAPP</ion-card-title>
+        <img src="logo.png" alt="Logo de la aplicación" class="logo">
+
+      </ion-card-header>
+
+      <ion-card-content>
+        Esta es la plataforma que permite registrar tu asistencia de manera rápida y eficiente utilizando tu dispositivo móvil.
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Botones de navegación o acciones principales -->
+
