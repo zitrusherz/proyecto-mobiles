@@ -59,6 +59,7 @@
         label-placement="stacked"
         type="email"
         [(ngModel)]="email"
+        
         name="email"
         required
         placeholder="Ejemplo: usuario@duocuc.cl o usuario@profesor.duoc.cl"
@@ -123,7 +124,14 @@
 
     <ion-text color="danger" *ngIf="passwordMatchError">Las contraseñas no coinciden.</ion-text>
   </div>
-
+  <ion-item>
+    <ion-label>Código de recuperación</ion-label>
+    <ion-label>{{ recoveryCode }}</ion-label>
+    <ion-button fill="clear" (click)="copyCode(recoveryCode)">
+      <ion-icon slot="icon-only" name="copy-outline"></ion-icon>
+    </ion-button>
+  </ion-item>
+  
   <div class="register-button-container">
     <ion-button expand="full" (click)="registerUser()" [disabled]="!validateForm()">Registrarse</ion-button>
   </div>

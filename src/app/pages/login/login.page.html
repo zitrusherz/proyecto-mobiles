@@ -1,0 +1,48 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title class="custom-title">Iniciar Sesión - RegistrAPP</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="login-background ion-padding">
+
+  <div class="login-container">
+
+    <form (ngSubmit)="loginUser()">
+      <ion-item class="custom-item">
+        <ion-icon slot="start" name="mail-outline"></ion-icon>
+        <ion-input
+          label="Correo Electrónico"
+          label-placement="floating"
+          type="email"
+          [(ngModel)]="loginEmail"
+          name="loginEmail"
+          required
+          placeholder="usuario@duocuc.cl o usuario@profesor.duoc.cl">
+        </ion-input>
+      </ion-item>
+
+      <ion-item class="custom-item">
+        <ion-icon slot="start" name="lock-closed-outline"></ion-icon>
+        <ion-input
+          label="Contraseña"
+          label-placement="floating" 
+          type="password"
+          [(ngModel)]="loginPassword"
+          name="loginPassword"
+          required>
+        </ion-input>
+      </ion-item>
+
+      <ion-button expand="block" type="submit" class="custom-button">Iniciar Sesión</ion-button>
+    </form>
+
+    <div class="ion-text-center link-container">
+      <ion-button fill="clear" class="link-button" (click)="goToRegister()">¿No tienes cuenta? Regístrate</ion-button>
+    </div>
+    <div class="ion-text-center link-container">
+      <ion-button fill="clear" class="link-button" (click)="goToPasswordRecovery()">Recupera tu contraseña</ion-button>
+    </div>
+
+  </div>
+</ion-content>

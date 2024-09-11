@@ -1,0 +1,35 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>Home</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="ion-padding">
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Bienvenido</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div *ngIf="usuario">
+        <h2>
+          Bienvenido {{usuario.rol}}, {{usuario.nombre}} {{usuario.primerApellido}} {{usuario.segundoApellido}}.
+        </h2>
+        <p>Esta es la App RegistrAPP.</p>
+
+        <p *ngIf="usuario.rol === 'estudiante'">
+          Puedes escanear el QR del profesor presionando el tab de abajo en el centro con el símbolo de QR.
+        </p>
+        <p *ngIf="usuario.rol === 'profesor'">
+          Puedes generar el código QR presionando el tab de abajo en el centro con el símbolo de QR.
+        </p>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <ion-tab-bar slot="bottom">
+    <ion-tab-button tab="qr">
+      <ion-icon name="qr-code-outline"></ion-icon>
+      <ion-label>QR</ion-label>
+    </ion-tab-button>
+  </ion-tab-bar>
+</ion-content>

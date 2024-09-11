@@ -1,6 +1,9 @@
 const webpack = require('webpack');
+ // Add this line to require the 'path' module
 
 module.exports = {
+  
+
   resolve: {
     fallback: {
       "vm": require.resolve("vm-browserify"),

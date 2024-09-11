@@ -13,6 +13,10 @@
         "build": {
           "builder": "@angular-builders/custom-webpack:browser",
           "options": {
+            "sourceMap": {
+              "styles": true,
+              "scripts": true
+            },
             "outputPath": "www",
             "index": "src/index.html",
             "main": "src/main.ts",

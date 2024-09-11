@@ -1,7 +1,10 @@
 import { Component, OnInit } from '@angular/core';
-import { AuthService } from 'src/app/services/auth.service';
+//import { AuthService } from 'src/app/services/auth.service';
 import { NavController, ToastController } from '@ionic/angular';
-import { AuthenticationStateService } from 'src/app/services/authentication-state.service';
+//import { AuthenticationStateService } from 'src/app/services/authentication-state.service';
+import { UserService } from 'src/app/services/user.service';
+import { User } from 'src/app/interface/user'; 
+
 
 @Component({
   selector: 'app-register',
@@ -26,14 +29,40 @@ export class RegisterPage implements OnInit {
   inputFocused: boolean = false;
   passwordMatchError: boolean = false;
   emailError: string = '';
+  isEmailValidationInProgress: boolean = false;
   passwordInputType: string = 'password';
+  recoveryCode: string = '';
+  
 
   constructor(
-    private authService: AuthService,
-    private authStateService: AuthenticationStateService,
+    /*private authService: AuthService,
+    private authStateService: AuthenticationStateService,*/
     private navCtrl: NavController,
-    private toastController: ToastController
-  ) {}
+    private toastController: ToastController,
+    private userService: UserService,
+
+  ) {
+    this.generateRecoveryCode();
+  }
+
+  copyCode(text: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      
+      this.presentToast('Texto copiado al portapapeles!');
+    }).catch(err => {
+      console.error('Error al copiar texto: ', err);
+    });
+  }
+
+  generateRecoveryCode() {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+    const codeLength = 10;
+    let result = '';
+    for (let i = 0; i < codeLength; i++) {
+      result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    this.recoveryCode = result;
+  }
 
   validatePassword(password: string) {
     if (password === undefined || password === null) {
@@ -51,24 +80,27 @@ export class RegisterPage implements OnInit {
       confirmPassword = '';
     }
     this.passwordMatchError = this.password !== confirmPassword;
+    
   }
 
   validateEmail() {
     const profesorRegex = /^[a-z]{2}\.[a-z]+@profesor\.duoc\.cl$/;
     const alumnoRegex = /^[a-z]{2}\.[a-z]+@duocuc\.cl$/;
 
-    if (profesorRegex.test(this.email)) {
+    if (profesorRegex.test(this.email.toLowerCase())) {
       this.emailError = '';
       console.log('Es un profesor');
-    } else if (alumnoRegex.test(this.email)) {
+    } else if (alumnoRegex.test(this.email.toLowerCase())) {
       this.emailError = '';
       console.log('Es un alumno');
     } else {
       this.emailError = 'El formato del correo no es válido.';
     }
+  
+    
   }
 
-  async registerUser() {
+  /*async registerUser() {
     if (this.validateForm()) {
       try {
         
@@ -101,8 +133,35 @@ export class RegisterPage implements OnInit {
       }
     }
   }
-  
+  */
+  // IMPLEMENTACION SIN BASE DE DATOS PARA PRIMERA ENTREGA
+  registerUser() {
+    if (this.validateForm()) {
+      if (this.userService.isEmailRegistered(this.email.toLowerCase())) {
+        this.presentToast('Este correo ya está registrado.');
+        return;
+      }
 
+      const newUser: User = {
+        primerNombre: this.primerNombre.toLowerCase(),
+        segundoNombre: this.segundoNombre.toLowerCase(),
+        primerApellido: this.primerApellido.toLowerCase(),
+        segundoApellido: this.segundoApellido.toLowerCase(),
+        email: this.email.toLowerCase(),
+        password: this.password,
+        codigoRecuperacion: this.recoveryCode,
+      };
+      console.log(this.recoveryCode, this.email.toLowerCase())
+      this.userService.addUser(newUser);
+      this.presentToast('Usuario registrado exitosamente');
+      this.goToHome();
+    } else {
+      this.presentToast('Por favor, verifica los datos ingresados.');
+    }
+  }
+
+  
+  // TERMINA AQUI LOS CAMBIOS
   togglePasswordVisibility() {
     this.passwordInputType = this.passwordInputType === 'password' ? 'text' : 'password';
   }
@@ -110,7 +169,9 @@ export class RegisterPage implements OnInit {
   validateForm(): boolean {
     this.validatePassword(this.password);
     this.validateConfirmPassword(this.confirmPassword);
-    this.validateEmail();
+    if (this.email.trim() !== '') {
+      this.validateEmail();
+    }
   
     return (
       !this.passwordMatchError &&
@@ -139,7 +200,7 @@ export class RegisterPage implements OnInit {
   async presentToast(message: string) {
     const toast = await this.toastController.create({
       message: message,
-      duration: 2000, 
+      duration: 1500, 
       position: 'bottom'
     });
     toast.present();
