@@ -62,7 +62,7 @@
         
         name="email"
         required
-        placeholder="Ejemplo: usuario@duocuc.cl o usuario@profesor.duoc.cl"
+        placeholder="Ejemplo: no.apellido@duocuc.cl o no.apellido@profesor.duoc.cl"
         (focus)="onFocus()"
         (blur)="onBlur(); validateEmail()"
       ></ion-input>
@@ -80,6 +80,7 @@
         required
         placeholder="Introduce tu contraseña"
         (ionInput)="validatePassword($event.detail.value ?? '')"
+        
       ></ion-input>
       <ion-button 
         fill="clear" 
