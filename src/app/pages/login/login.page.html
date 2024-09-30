@@ -8,33 +8,41 @@
 
   <div class="login-container">
 
-    <form (ngSubmit)="loginUser()">
+    <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
       <ion-item class="custom-item">
         <ion-icon slot="start" name="mail-outline"></ion-icon>
         <ion-input
           label="Correo Electrónico"
           label-placement="floating"
           type="email"
-          [(ngModel)]="loginEmail"
-          name="loginEmail"
+          formControlName="email"
           required
           placeholder="usuario@duocuc.cl o usuario@profesor.duoc.cl">
         </ion-input>
+        <ion-text color="danger" *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
+          El correo electrónico no es válido.
+        </ion-text>
       </ion-item>
 
-      <ion-item class="custom-item">
+      <ion-item class="password">
         <ion-icon slot="start" name="lock-closed-outline"></ion-icon>
         <ion-input
           label="Contraseña"
           label-placement="floating" 
-          type="password"
-          [(ngModel)]="loginPassword"
-          name="loginPassword"
+          [type]="passwordInputType"
+          formControlName="password"
+          placeholder="Introduce tu contraseña"
           required>
         </ion-input>
+        <ion-button fill="clear" slot="end" (click)="togglePasswordVisibility()">
+          <ion-icon [name]="passwordInputType === 'password' ? 'eye-off' : 'eye'"></ion-icon>
+        </ion-button>
+        <ion-text color="danger" *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
+          La contraseña debe tener al menos 10 caracteres.
+        </ion-text>
       </ion-item>
 
-      <ion-button expand="block" type="submit" class="custom-button">Iniciar Sesión</ion-button>
+      <ion-button expand="block" type="submit" class="custom-button" >Iniciar Sesión</ion-button>
     </form>
 
     <div class="ion-text-center link-container">

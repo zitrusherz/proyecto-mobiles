@@ -39,8 +39,8 @@ export class SqliteService {
     } else if (info.platform === 'web') {
       this.isWeb = true;
       try {
-        await sqlite.initWebStore(); // Inicializa el almacén web primero
-        await this.setupDataBase(); // Luego configura la base de datos
+        await sqlite.initWebStore(); 
+        await this.setupDataBase(); 
         this.dbReady.next(true);
       } catch (e) {
         console.error(e);
@@ -61,21 +61,28 @@ export class SqliteService {
     }
   
     try {
-      const { dbName, encryptionKey } = await this.loadConfiguration();
-  
-      this.db = await sqlite.createConnection(
-        dbName,
-        true,
-        'encryption',
-        1,
-        false
-      );
-  
-      await this.db.open();
-  
-      // Solo configura la encriptación si estamos en una plataforma que lo soporta
+      
       if (this.isIOS || info.platform === 'android') {
+        const { dbName, encryptionKey } = await this.loadConfigurationPhone();
+        this.db = await sqlite.createConnection(
+          dbName,
+          true,
+          'encryption',
+          1,
+          false
+        );
+        await this.db.open();
         await sqlite.setEncryptionSecret(encryptionKey);
+      }else{
+        const {dbName} = await this.loadConfigurationWeb()
+        this.db = await sqlite.createConnection(
+          dbName,
+          false,
+          'no-encryption',
+          1,
+          false
+        );
+        await this.db.open()
       }
   
       await this.createTables();
@@ -104,6 +111,7 @@ export class SqliteService {
       segundoApellido TEXT,
       email TEXT NOT NULL UNIQUE,
       password TEXT NOT NULL,
+      codeRecovery TEXT NOT NULL,
       role TEXT NOT NULL
     );
     `;
@@ -139,22 +147,31 @@ export class SqliteService {
     segundoApellido: string,
     email: string,
     password: string,
+    codeRecovery: string,
     role: string
   ) {
-    if (this.db) {
+    const info = await Device.getInfo();
+    if (this.db && (this.isIOS || info.platform === 'android')) {
       try {
         const hashedPassword = await bcrypt.hash(password, 10);
         const query = `
-          INSERT INTO users (primerNombre, segundoNombre, primerApellido, segundoApellido, email, password, role)
-          VALUES (?, ?, ?, ?, ?, ?, ?);
+          INSERT INTO users (primerNombre, segundoNombre, primerApellido, segundoApellido, email, password, codeRecovery, role)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?);
         `;
-        await this.db.run(query, [primerNombre, segundoNombre, primerApellido, segundoApellido, email, hashedPassword, role]);
+        await this.db.run(query, [primerNombre, segundoNombre, primerApellido, segundoApellido, email, hashedPassword, codeRecovery, role]);
         console.log('User added successfully');
       } catch (error) {
         console.error('Error adding user', error);
         throw error;
       }
-    } else {
+    } else if(this.db && info.platform === 'web') {
+      const query = `
+      INSERT INTO users (primerNombre, segundoNombre, primerApellido, segundoApellido, email, password, codeRecovery, role)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+        `;
+        await this.db.run(query, [primerNombre, segundoNombre, primerApellido, segundoApellido, email, password, codeRecovery, role]);
+        console.log('User added successfully');
+    }else{
       throw new Error('Database connection not established');
     }
   }
@@ -216,7 +233,12 @@ export class SqliteService {
     try {
       
       await Preferences.set({ key: 'dbName', value: dbName });
-      await Preferences.set({ key: 'encryptionKey', value: encryptionKey });
+      const info = await Device.getInfo();
+      if(this.isIOS || info.platform === 'android'){
+        await Preferences.set({ key: 'encryptionKey', value: encryptionKey });
+      }else{
+
+      }
       console.log('Configuración guardada exitosamente');
     } catch (error) {
       console.error('Error al guardar la configuración:', error);
@@ -224,15 +246,33 @@ export class SqliteService {
   }
 
   
-  async loadConfiguration() {
+  async loadConfigurationWeb() {
     try {
       const { value: dbName } = await Preferences.get({ key: 'dbName' });
-      const { value: encryptionKey } = await Preferences.get({ key: 'encryptionKey' });
+      
+      return {
+      dbName: dbName ?? this.defaultDbName,
+        };
+    } catch (error) {
+      console.error('Error al cargar la configuración:', error);
+      return {
+        dbName: this.defaultDbName,
+        
+      };
+    }
+  }
 
+  async loadConfigurationPhone() {
+    try {
+      const { value: dbName } = await Preferences.get({ key: 'dbName' });
+      
+      const { value: encryptionKey } = await Preferences.get({ key: 'encryptionKey' });
       return {
         dbName: dbName ?? this.defaultDbName,
         encryptionKey: encryptionKey ?? this.defaultEncryptionKey
       };
+      
+      
     } catch (error) {
       console.error('Error al cargar la configuración:', error);
       return {
@@ -241,4 +281,13 @@ export class SqliteService {
       };
     }
   }
+
+  private async isEncryptionSupported(): Promise<boolean> {
+    const info = await Device.getInfo();
+    return this.isIOS || info.platform === 'android';
+  }
+  
+
 }
+
+

@@ -1,8 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { NavController, ToastController } from '@ionic/angular';
-//import { AuthService } from 'src/app/services/auth.service';
-//import { AuthenticationStateService } from 'src/app/services/authentication-state.service';
-import { UserService } from 'src/app/services/user.service';
+import { AuthService } from 'src/app/services/auth.service';
+import { AuthenticationStateService } from 'src/app/services/authentication-state.service';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { CustomEmailValidators } from 'src/app/validators/email-validator';
+import { CustomPasswordValidators } from 'src/app/validators/password-validator';
+
 interface User {
   primerNombre: string;
   segundoNombre: string;
@@ -17,47 +20,59 @@ interface User {
   templateUrl: 'login.page.html',
   styleUrls: ['login.page.scss']
 })
-export class LoginPage {
-  //email: string = '';
-  //password: string = '';
-  users: User[] = [];
-  loginEmail: string = '';
-  loginPassword: string = '';
+export class LoginPage implements OnInit{
+  email: string = '';
+  password: string = '';
+  passwordInputType: string = 'password';
+  loginForm!: FormGroup;
   constructor(
-    /*private authService: AuthService,
-    private authStateService: AuthenticationStateService,*/
+    private authService: AuthService,
+    private authStateService: AuthenticationStateService,
     private navCtrl: NavController,
     private toastController: ToastController,
-    private userService: UserService
+    private formBuilder: FormBuilder,
   ) {}
-  // IMPLEMENTACION CON SQLITE
-  /*async onLogin() {
-    try {
-      const isAuthenticated = await this.authService.login(this.email, this.password);
 
-      if (isAuthenticated) {
-        this.authStateService.setAuthenticated(true);
-        this.navCtrl.navigateForward('/tabs');
-      } else {
-        const userExists = await this.authService.checkUserExists(this.email);
-        if (userExists) {
-          await this.presentToast('La contraseña es incorrecta.');
+  ngOnInit() {
+    this.loginForm = this.formBuilder.group({
+      email: ['', [Validators.required, Validators.email, CustomEmailValidators.emailValidator]],  
+      password: ['', [Validators.required, Validators.minLength(10),CustomPasswordValidators.passwordValidator]],  
+      confirmPassword: ['', Validators.required]},
+      {validator: CustomPasswordValidators.matchPassword
+    });
+  }
+  // IMPLEMENTACION CON SQLITE
+  async onLogin() {
+    if(this.loginForm.valid){
+      try {
+        const isAuthenticated = await this.authService.login(this.email, this.password);
+
+        if (isAuthenticated) {
+          console.log("Autenticado")
+          this.authStateService.setAuthenticated(true);
+          this.navCtrl.navigateForward('/home-page');
         } else {
-          await this.presentToast('El usuario no existe.');
+          console.log(" NO Autenticado")
+          const userExists = await this.authService.checkUserExists(this.email);
+          if (userExists) {
+            await this.presentToast('La contraseña es incorrecta.');
+          } else {
+            await this.presentToast('El usuario no existe.');
+          }
         }
+      } catch (error) {
+        console.error('Error during login:', error);
+        await this.presentToast('Error al intentar iniciar sesión.');
+      } finally {
+        
+        this.email = '';
+        this.password = '';
       }
-    } catch (error) {
-      console.error('Error during login:', error);
-      await this.presentToast('Error al intentar iniciar sesión.');
-    } finally {
-      
-      this.email = '';
-      this.password = '';
     }
   }
-  */
+  
   //TERMINO
-  loginUser() {
+  /*loginUser() {
     const user = this.userService.getUsers().find(user => 
       user.email === this.loginEmail.toLowerCase() && 
       user.password === this.loginPassword
@@ -69,7 +84,7 @@ export class LoginPage {
     } else {
       this.presentToast('Correo electrónico o contraseña incorrectos');
     }
-  }
+  }*/
 
   async presentToast(message: string) {
     const toast = await this.toastController.create({
@@ -80,17 +95,10 @@ export class LoginPage {
     toast.present();
   }
 
-  goToHome(user: User) {
-    this.navCtrl.navigateForward('/home-page', {
-      queryParams: {
-        nombre: user.primerNombre,
-        primerApellido: user.primerApellido,
-        segundoApellido: user.segundoApellido,
-        email: user.email
-      }
-    });
-  }
 
+  togglePasswordVisibility() {
+    this.passwordInputType = this.passwordInputType === 'password' ? 'text' : 'password';
+  }
 
   goToRegister() {
     this.navCtrl.navigateForward('/register');

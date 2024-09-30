@@ -6,7 +6,7 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { SqliteService } from './services/sqlite.service';
 import { defineCustomElements as  jeepSqlite} from 'jeep-sqlite/loader';
-
+import { ReactiveFormsModule } from '@angular/forms';
 
 jeepSqlite(window);
 @NgModule({
@@ -15,6 +15,7 @@ jeepSqlite(window);
     BrowserModule,
     IonicModule.forRoot(),
     AppRoutingModule,
+    ReactiveFormsModule,
   ],
   providers: [
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },

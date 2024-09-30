@@ -15,7 +15,8 @@
           "options": {
             "sourceMap": {
               "styles": true,
-              "scripts": true
+              "scripts": true,
+              "allowedCommonJsDependencies": ["bcryptjs"]
             },
             "outputPath": "www",
             "index": "src/index.html",
