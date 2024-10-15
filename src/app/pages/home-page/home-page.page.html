@@ -5,26 +5,36 @@
 </ion-header>
 
 <ion-content [fullscreen]="true" class="ion-padding">
-  <ion-card>
+  <ion-card *ngIf="usuario; else noUser">
     <ion-card-header>
       <ion-card-title>Bienvenido</ion-card-title>
     </ion-card-header>
     <ion-card-content>
-      <div *ngIf="usuario">
-        <h2>
-          Bienvenido {{usuario.rol}}, {{usuario.nombre}} {{usuario.primerApellido}} {{usuario.segundoApellido}}.
-        </h2>
-        <p>Esta es la App RegistrAPP.</p>
+      <h2>
+        Bienvenido {{ usuario.role }}, {{ usuario.primerNombre }} {{ usuario.primerApellido }} {{ usuario.segundoApellido }}.
+      </h2>
+      <p>Esta es la App RegistrAPP.</p>
 
-        <p *ngIf="usuario.rol === 'estudiante'">
-          Puedes escanear el QR del profesor presionando el tab de abajo en el centro con el símbolo de QR.
-        </p>
-        <p *ngIf="usuario.rol === 'profesor'">
-          Puedes generar el código QR presionando el tab de abajo en el centro con el símbolo de QR.
-        </p>
-      </div>
+      <p *ngIf="usuario.role === 'estudiante'">
+        Puedes escanear el QR del profesor presionando el tab de abajo en el centro con el símbolo de QR.
+      </p>
+      <p *ngIf="usuario.role === 'profesor'">
+        Puedes generar el código QR presionando el tab de abajo en el centro con el símbolo de QR.
+      </p>
     </ion-card-content>
   </ion-card>
+
+  <!-- Muestra un mensaje si no se encuentra al usuario -->
+  <ng-template #noUser>
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Error</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <p>No se encontró un usuario registrado. Por favor, inicia sesión nuevamente.</p>
+      </ion-card-content>
+    </ion-card>
+  </ng-template>
 
   <ion-tab-bar slot="bottom">
     <ion-tab-button tab="qr">

@@ -1,39 +1,49 @@
-
 import { Injectable } from '@angular/core';
-import { User } from 'src/app/interface/user';
+import { BehaviorSubject } from 'rxjs';
+import { User } from '../interface/user';
 
 @Injectable({
   providedIn: 'root',
 })
 export class UserService {
-  private users: User[] = [];
+  private userSubject = new BehaviorSubject<User | null>(null);
 
   constructor() {}
 
-  addUser(user: User) {
-    this.users.push(user);
+  setUser(user: User): void {
+    this.userSubject.next(user);
   }
 
-  getUsers(): User[] {
-    return this.users;
+  getUser() {
+    return this.userSubject.asObservable();
   }
 
-  isEmailRegistered(email: string): boolean {
-    return this.users.some((user) => user.email === email);
+  clearUser(): void {
+    this.userSubject.next(null);
   }
 
-  getUserByRecoveryCode(recoveryCode: string): User | undefined {
-    return this.users.find(user => user.codigoRecuperacion === recoveryCode);
-  }
-  getUserByEmail(email: string): User | undefined {
-    return this.users.find(user => user.email === email);
-  }
+  createUser(
+    primerNombre: string,
+    segundoNombre: string | null,
+    primerApellido: string,
+    segundoApellido: string,
+    email: string,
+    password: string,
+    role: string,
+    recoveryCode: string
+  ): User {
+    const user = {
+      primerNombre,
+      segundoNombre: segundoNombre || '',
+      primerApellido,
+      segundoApellido,
+      password,
+      email,
+      role,
+      recoveryCode,
+    };
 
-  updatePassword(user: User, newPassword: string): void {
-    const foundUser = this.users.find(u => u.email === user.email);
-    if (foundUser) {
-      foundUser.password = newPassword;
-    }
+    console.log('Usuario creado en UserService:', user);
+    return user;
   }
-
 }

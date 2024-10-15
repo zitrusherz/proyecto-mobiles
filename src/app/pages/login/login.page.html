@@ -5,44 +5,55 @@
 </ion-header>
 
 <ion-content [fullscreen]="true" class="login-background ion-padding">
-
   <div class="login-container">
 
-    <form (ngSubmit)="loginUser()">
-      <ion-item class="custom-item">
+    <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
+      <!-- Email Field -->
+      <ion-item class="custom-item" [class.ion-invalid]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
         <ion-icon slot="start" name="mail-outline"></ion-icon>
         <ion-input
           label="Correo Electrónico"
           label-placement="floating"
           type="email"
-          [(ngModel)]="loginEmail"
-          name="loginEmail"
-          required
+          formControlName="email"
           placeholder="usuario@duocuc.cl o usuario@profesor.duoc.cl">
         </ion-input>
       </ion-item>
+      <ion-text color="danger" *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
+        Correo electrónico no válido.
+      </ion-text>
 
-      <ion-item class="custom-item">
+      <!-- Password Field -->
+      <ion-item class="custom-item" [class.ion-invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
         <ion-icon slot="start" name="lock-closed-outline"></ion-icon>
         <ion-input
           label="Contraseña"
-          label-placement="floating" 
-          type="password"
-          [(ngModel)]="loginPassword"
-          name="loginPassword"
-          required>
+          label-placement="stacked"
+          [type]="passwordInputType"
+          formControlName="password"
+          placeholder="Introduce tu contraseña">
+          <ion-input-password-toggle slot="end"></ion-input-password-toggle>
         </ion-input>
       </ion-item>
+      <ion-text color="danger" *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
+        Contraseña requerida.
+      </ion-text>
 
-      <ion-button expand="block" type="submit" class="custom-button">Iniciar Sesión</ion-button>
+      <!-- Loading Spinner -->
+      <ion-spinner *ngIf="isLoading" name="crescent"></ion-spinner>
+
+      <!-- Login Button -->
+      <ion-button expand="block" type="submit" class="custom-button" [disabled]="loginForm.invalid || isLoading">
+        Iniciar Sesión
+      </ion-button>
     </form>
 
+    <!-- Navigation Links -->
     <div class="ion-text-center link-container">
       <ion-button fill="clear" class="link-button" (click)="goToRegister()">¿No tienes cuenta? Regístrate</ion-button>
     </div>
     <div class="ion-text-center link-container">
       <ion-button fill="clear" class="link-button" (click)="goToPasswordRecovery()">Recupera tu contraseña</ion-button>
     </div>
-
   </div>
 </ion-content>

@@ -1,4 +1,15 @@
 <ion-app>
+  <ion-loading
+    *ngIf="!load"
+    [message]="'Cargando aplicación...'"
+    spinner="crescent"
+  ></ion-loading>
+
   <ion-router-outlet *ngIf="load"></ion-router-outlet>
+
   <jeep-sqlite *ngIf="isWeb"></jeep-sqlite>
+
+  <div *ngIf="isWeb && !jeepSqliteAvailable">
+    <p>Error: El componente jeep-sqlite no está disponible en esta plataforma web.</p>
+  </div>
 </ion-app>
