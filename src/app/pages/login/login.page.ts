@@ -1,110 +1,101 @@
-import { Component, OnInit } from '@angular/core';
-import { NavController, ToastController } from '@ionic/angular';
-import { AuthService } from 'src/app/services/auth.service';
-import { AuthenticationStateService } from 'src/app/services/authentication-state.service';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { CustomEmailValidators } from 'src/app/validators/email-validator';
-import { CustomPasswordValidators } from 'src/app/validators/password-validator';
-
-interface User {
-  primerNombre: string;
-  segundoNombre: string;
-  primerApellido: string;
-  segundoApellido: string;
-  email: string;
-  password: string;
-}
+import {Component, OnInit} from '@angular/core';
+import {FormBuilder, FormGroup, Validators} from '@angular/forms';
+import {NavController, ToastController} from '@ionic/angular';
+import {AuthService} from 'src/app/services/auth.service';
 
 @Component({
   selector: 'app-login',
   templateUrl: 'login.page.html',
-  styleUrls: ['login.page.scss']
+  styleUrls: ['login.page.scss'],
 })
-export class LoginPage implements OnInit{
-  email: string = '';
-  password: string = '';
-  passwordInputType: string = 'password';
+export class LoginPage implements OnInit {
   loginForm!: FormGroup;
+  passwordInputType: string = 'password';
+  isLoading: boolean = false;
+
   constructor(
-    private authService: AuthService,
-    private authStateService: AuthenticationStateService,
-    private navCtrl: NavController,
-    private toastController: ToastController,
-    private formBuilder: FormBuilder,
+    private readonly formBuilder: FormBuilder,
+    private readonly authService: AuthService,
+    private readonly navCtrl: NavController,
+    private readonly toastController: ToastController
   ) {}
 
   ngOnInit() {
     this.loginForm = this.formBuilder.group({
-      email: ['', [Validators.required, Validators.email, CustomEmailValidators.emailValidator]],  
-      password: ['', [Validators.required, Validators.minLength(10),CustomPasswordValidators.passwordValidator]],  
-      confirmPassword: ['', Validators.required]},
-      {validator: CustomPasswordValidators.matchPassword
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', Validators.required],
     });
   }
-  // IMPLEMENTACION CON SQLITE
+
   async onLogin() {
-    if(this.loginForm.valid){
+    if (this.loginForm.valid) {
+      const { email, password } = this.loginForm.value;
+
+      this.isLoading = true;
+
       try {
-        const isAuthenticated = await this.authService.login(this.email, this.password);
+        const isAuthenticated = await this.authService.login(email, password, true);
+
+        this.isLoading = false;
 
         if (isAuthenticated) {
-          console.log("Autenticado")
-          this.authStateService.setAuthenticated(true);
-          this.navCtrl.navigateForward('/home-page');
+          this.goToHome();
         } else {
-          console.log(" NO Autenticado")
-          const userExists = await this.authService.checkUserExists(this.email);
-          if (userExists) {
-            await this.presentToast('La contraseña es incorrecta.');
-          } else {
-            await this.presentToast('El usuario no existe.');
-          }
+          this.handleLoginFailure();
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error during login:', error);
-        await this.presentToast('Error al intentar iniciar sesión.');
-      } finally {
-        
-        this.email = '';
-        this.password = '';
+        let errorMessage = 'Error al intentar iniciar sesión.';
+
+        if (error.message && error.message.includes('network')) {
+          errorMessage = 'Error de red. Verifique su conexión.';
+        }
+
+        await this.presentToast(errorMessage);
+
+        this.isLoading = false;
       }
+    } else {
+      await this.presentToast(
+        'Por favor, llena todos los campos correctamente.'
+      );
     }
   }
-  
-  //TERMINO
-  /*loginUser() {
-    const user = this.userService.getUsers().find(user => 
-      user.email === this.loginEmail.toLowerCase() && 
-      user.password === this.loginPassword
-    );
 
-    if (user) {
-      this.presentToast('Inicio de sesión exitoso');
-      this.goToHome(user);  
+  async handleLoginFailure() {
+    const userExists = await this.authService.checkUserExists(
+      this.loginForm.get('email')?.value
+    );
+    if (userExists) {
+      await this.presentToast('La contraseña es incorrecta.');
     } else {
-      this.presentToast('Correo electrónico o contraseña incorrectos');
+      await this.presentToast('El usuario no existe.');
     }
-  }*/
+  }
 
   async presentToast(message: string) {
     const toast = await this.toastController.create({
       message: message,
       duration: 2000,
-      position: 'bottom'
+      position: 'bottom',
     });
     toast.present();
   }
 
-
   togglePasswordVisibility() {
-    this.passwordInputType = this.passwordInputType === 'password' ? 'text' : 'password';
+    this.passwordInputType =
+      this.passwordInputType === 'password' ? 'text' : 'password';
+  }
+
+  goToHome() {
+    this.navCtrl.navigateForward('/home-page');
   }
 
   goToRegister() {
     this.navCtrl.navigateForward('/register');
   }
 
-  goToPasswordRecovery(){
+  goToPasswordRecovery() {
     this.navCtrl.navigateForward('/password-recovery');
   }
 }

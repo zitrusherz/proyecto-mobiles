@@ -1,6 +1,10 @@
-import { NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
-import { TabsPage } from './tabs.page';
+import {NgModule} from '@angular/core';
+import {RouterModule, Routes} from '@angular/router';
+import {TabsPage} from './tabs.page';
+
+const loginRoute = 'login';
+const qrRoute = 'qr';
+const tab3Route = 'tab3';
 
 const routes: Routes = [
   {
@@ -8,29 +12,32 @@ const routes: Routes = [
     component: TabsPage,
     children: [
       {
-        path: 'login',
-        loadChildren: () => import('../login/login.module').then(m => m.LoginPageModule)
+        path: loginRoute,
+        loadChildren: () =>
+          import('../login/login.module').then((m) => m.LoginPageModule),
       },
       {
-        path: 'tab2',
-        loadChildren: () => import('../tab2/tab2.module').then(m => m.Tab2PageModule)
+        path: qrRoute,
+        loadChildren: () =>
+          import('../qr/qr.module').then((m) => m.QrPageModule),
       },
       {
-        path: 'tab3',
-        loadChildren: () => import('../tab3/tab3.module').then(m => m.Tab3PageModule)
+        path: tab3Route,
+        loadChildren: () =>
+          import('../tab3/tab3.module').then((m) => m.Tab3PageModule),
       },
       {
         path: '',
-        redirectTo: '/tabs/login',
-        pathMatch: 'prefix'
-      }
-    ]
+        redirectTo: `/tabs/${loginRoute}`,
+        pathMatch: 'prefix',
+      },
+    ],
   },
   {
     path: '',
-    redirectTo: '/tabs/login',
-    pathMatch: 'full'
-  }
+    redirectTo: `/tabs/${loginRoute}`,
+    pathMatch: 'full',
+  },
 ];
 
 @NgModule({

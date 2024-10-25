@@ -1,19 +1,29 @@
-import { Component, OnInit } from '@angular/core';
-import { AuthenticationStateService } from 'src/app/services/authentication-state.service';
+import {Component, OnDestroy, OnInit} from '@angular/core';
+import {Subject} from 'rxjs';
+import {takeUntil} from 'rxjs/operators';
+import {AuthService} from 'src/app/services/auth.service';
 
 @Component({
   selector: 'app-tabs',
   templateUrl: 'tabs.page.html',
-  styleUrls: ['tabs.page.scss']
+  styleUrls: ['tabs.page.scss'],
 })
-export class TabsPage implements OnInit {
-  isTab2Enabled: boolean = false;
+export class TabsPage implements OnInit, OnDestroy {
+  isqrEnabled = false;
+  private destroy$ = new Subject<void>();
 
-  constructor(private authStateService: AuthenticationStateService) {}
+  constructor(private authService: AuthService) {}
 
   ngOnInit() {
-    this.authStateService.isAuthenticated$.subscribe(isAuthenticated => {
-      this.isTab2Enabled = isAuthenticated;
-    });
+    this.authService.isAuthenticated$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((isAuthenticated) => {
+        this.isqrEnabled = isAuthenticated;
+      });
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

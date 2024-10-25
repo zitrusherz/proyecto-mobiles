@@ -1,144 +1,226 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
-import { Device } from '@capacitor/device';
-import { CapacitorSQLite, SQLiteDBConnection, SQLiteConnection } from '@capacitor-community/sqlite';
-import { Preferences } from '@capacitor/preferences';
-import * as bcrypt from 'bcryptjs';
-
-
+import {Injectable} from '@angular/core';
+import {BehaviorSubject} from 'rxjs';
+import {Device} from '@capacitor/device';
+import {CapacitorSQLite, SQLiteConnection, SQLiteDBConnection,} from '@capacitor-community/sqlite';
+import {Preferences} from '@capacitor/preferences';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class SqliteService {
-  public dbReady: BehaviorSubject<boolean>;
-  private db?: SQLiteDBConnection;
-  public isWeb: boolean;
-  public isIOS: boolean;
-  private readonly defaultDbName: string = 'RegistrAPP';
-  private readonly defaultEncryptionKey: string = 'Zitrus:3!';
+  public static readonly dbReady: BehaviorSubject<boolean> =
+    new BehaviorSubject(false);
+  private static db?: SQLiteDBConnection;
+  public static isWeb: boolean = false;
+  public static isIOS: boolean = false;
+  private static readonly defaultDbName: string = 'RegistrAPP';
+  public static isDbConnected: boolean = false;
 
   constructor() {
-    this.dbReady = new BehaviorSubject(false);
-    this.isWeb = false;
-    this.isIOS = false;
+    console.log('constructor');
     this.init();
   }
 
   async init() {
+    console.log('init');
     const info = await Device.getInfo();
     const sqlite = CapacitorSQLite as any;
-  
+
     if (info.platform === 'android') {
       try {
         await sqlite.requestPermissions();
-        await this.setupDataBase();
+        await SqliteService.ensureDbReady();
       } catch (e) {
-        console.error('Esta app necesita permisos para funcionar correctamente');
+        console.error(
+          'Esta app necesita permisos para funcionar correctamente',
+          e
+        );
       }
     } else if (info.platform === 'web') {
-      this.isWeb = true;
+      SqliteService.isWeb = true;
       try {
-        await sqlite.initWebStore(); 
-        await this.setupDataBase(); 
-        this.dbReady.next(true);
+        await sqlite.initWebStore();
+        await SqliteService.ensureDbReady();
+        console.log('Web store initialized');
       } catch (e) {
         console.error(e);
       }
     } else if (info.platform === 'ios') {
-      this.isIOS = true;
-      await this.setupDataBase();
+      SqliteService.isIOS = true;
+      await SqliteService.ensureDbReady();
     }
   }
-  
 
-  async setupDataBase() {
-    const sqlite = new SQLiteConnection(CapacitorSQLite);
-    const info = await Device.getInfo();
-    if (this.db) {
-      this.dbReady.next(true);
+  static async closeDbConnection(): Promise<void> {
+    console.log('closeDbConnection');
+    if (SqliteService.db) {
+      try {
+        await SqliteService.db.close();
+        SqliteService.isDbConnected = false;
+        console.log('Database connection closed');
+      } catch (error) {
+        console.error('Error closing database connection:', error);
+      }
+    } else {
+      console.log('No database connection to close.');
+    }
+  }
+
+  static async getDbConnection(): Promise<SQLiteDBConnection | undefined> {
+    console.log('getDbConnection');
+    if (SqliteService.isDbConnected && SqliteService.db) {
+      console.log('La conexión a la base de datos ya está establecida');
+      return SqliteService.db;
+    }
+
+    try {
+      await SqliteService.setupDataBase();
+
+      SqliteService.isDbConnected = true;
+      console.log('Conexión a la base de datos establecida en getDbConnection');
+
+      return SqliteService.db;
+    } catch (error) {
+      console.error('Error al obtener la conexión a la base de datos:', error);
+
+      return undefined;
+    }
+  }
+
+  static async ensureDbReady(): Promise<void> {
+    console.log('ensureDbReady called');
+
+    if (SqliteService.dbReady.getValue()) {
+      console.log('Base de datos ya está lista.');
       return;
     }
-  
-    try {
-      
-      if (this.isIOS || info.platform === 'android') {
-        const { dbName, encryptionKey } = await this.loadConfigurationPhone();
-        this.db = await sqlite.createConnection(
-          dbName,
-          true,
-          'encryption',
-          1,
-          false
+
+    if (!SqliteService.db) {
+      console.log('Obteniendo conexión a la base de datos...');
+      SqliteService.db = await SqliteService.getDbConnection();
+    }
+
+    if (!SqliteService.isDbConnected) {
+      try {
+        console.log('Inicializando la base de datos...');
+        await SqliteService.setupDataBase();
+        SqliteService.isDbConnected = true;
+        SqliteService.dbReady.next(true); // Marcar como lista
+        console.log('La base de datos está conectada y lista para su uso.');
+      } catch (error) {
+        console.error(
+          'Error al asegurar la conexión con la base de datos:',
+          error
         );
-        await this.db.open();
-        await sqlite.setEncryptionSecret(encryptionKey);
-      }else{
-        const {dbName} = await this.loadConfigurationWeb()
-        this.db = await sqlite.createConnection(
-          dbName,
-          false,
-          'no-encryption',
-          1,
-          false
-        );
-        await this.db.open()
+        throw new Error('Error en la conexión con la base de datos');
       }
-  
-      await this.createTables();
-      this.dbReady.next(true);
-    } catch (error) {
-      console.error('Error al crear o abrir la base de datos:', error);
+    } else {
+      console.log('La conexión a la base de datos ya está establecida.');
     }
   }
-  
 
-  getDbConnection(): SQLiteDBConnection | undefined {
-    return this.db;
+  static async setupDataBase() {
+    console.log('setupDataBase');
+    const sqlite = new SQLiteConnection(CapacitorSQLite);
+
+    if (SqliteService.db || SqliteService.dbReady.getValue()) {
+      console.log(
+        'La conexión a la base de datos ya está establecida en setupDataBase'
+      );
+      return;
+    }
+
+    console.time('Database setup');
+
+    try {
+      const { dbName } = await SqliteService.loadConfiguration();
+      console.log('Nombre de la base de datos:', dbName);
+      SqliteService.db = await sqlite.createConnection(
+        dbName,
+        false,
+        'no-encryption',
+        1,
+        false
+      );
+
+      await SqliteService.db.open();
+      console.log('Conexión a la base de datos abierta');
+
+      await SqliteService.createTables(); // Asegurarse de que createTables sea estática
+      console.log('Tablas creadas');
+
+      SqliteService.dbReady.next(true);
+      console.log('Conexión a la base de datos establecida');
+
+      SqliteService.isDbConnected = true;
+      console.timeEnd('Database setup');
+    } catch (error) {
+      console.error('Error al crear o abrir la base de datos:', error);
+      SqliteService.isDbConnected = false;
+      console.timeEnd('Database setup');
+    }
   }
 
-  async createTables() {
-    if (!this.db) {
-      throw new Error('Base de datos no está conectada');
+  static async createTables() {
+    console.log('createTables');
+    if (!SqliteService.db) {
+      throw new Error('La base de datos no está conectada');
     }
 
     const createUsersTable = `
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      primerNombre TEXT,
+      primerNombre TEXT NOT NULL,
       segundoNombre TEXT,
-      primerApellido TEXT,
-      segundoApellido TEXT,
+      primerApellido TEXT NOT NULL,
+      segundoApellido TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       password TEXT NOT NULL,
-      codeRecovery TEXT NOT NULL,
-      role TEXT NOT NULL
+      role TEXT NOT NULL,
+      recoveryCode TEXT NOT NULL
     );
-    `;
+  `;
 
     try {
-      await this.db.execute(createUsersTable);
+      await SqliteService.db.execute(createUsersTable);
+      console.log('Tablas creadas con éxito');
     } catch (error) {
       console.error('Error al crear las tablas:', error);
     }
   }
 
   async userExists(email: string): Promise<boolean> {
-    if (!this.db) {
-      throw new Error('Base de datos no está conectada');
-    }
-  
-    const query = `SELECT COUNT(*) as count FROM users WHERE email = ?`;
+    console.log('userExists');
+
     try {
-      const result = await this.db.query(query, [email]);
-      const count = result.values && result.values.length > 0 ? result.values[0][0] : 0;
+      await SqliteService.ensureDbReady();
+
+      if (!SqliteService.db) {
+        console.error('No se pudo obtener la conexión a la base de datos');
+        return false;
+      }
+
+      const query = `SELECT COUNT(*) as count FROM users WHERE email = ?`;
+      const result = await SqliteService.db.query(query, [email]);
+      console.log('Result:', result);
+
+      let count = 0;
+      if (Array.isArray(result.values)) {
+        if (result.values.length > 0) {
+          count = Array.isArray(result.values[0]) ? result.values[0][0] : 0;
+        }
+      } else if (typeof result.values === 'object' && result.values !== null) {
+        count = result.values['count'] || 0;
+      }
+
+      console.log('Cantidad de usuarios encontrados:', count);
       return count > 0;
     } catch (error) {
-      console.error('Error al verificar existencia de usuario', error);
+      const errMessage = (error as Error).message || 'Error desconocido';
+      console.error('Error al verificar existencia de usuario:', errMessage);
       throw error;
     }
   }
-  
 
   async addUser(
     primerNombre: string,
@@ -147,65 +229,184 @@ export class SqliteService {
     segundoApellido: string,
     email: string,
     password: string,
-    codeRecovery: string,
-    role: string
-  ) {
-    const info = await Device.getInfo();
-    if (this.db && (this.isIOS || info.platform === 'android')) {
-      try {
-        const hashedPassword = await bcrypt.hash(password, 10);
+    role: string,
+    recoveryCode: string
+  ): Promise<void> {
+    console.log('addUser');
+    if (!SqliteService.db || !SqliteService.isDbConnected) {
+      console.error('No hay conexión a la base de datos disponible.');
+      throw new Error('No hay conexión a la base de datos disponible.');
+    }
+    try {
+      await SqliteService.ensureDbReady();
+
+      if (SqliteService.db) {
         const query = `
-          INSERT INTO users (primerNombre, segundoNombre, primerApellido, segundoApellido, email, password, codeRecovery, role)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?);
-        `;
-        await this.db.run(query, [primerNombre, segundoNombre, primerApellido, segundoApellido, email, hashedPassword, codeRecovery, role]);
-        console.log('User added successfully');
-      } catch (error) {
-        console.error('Error adding user', error);
-        throw error;
+        INSERT INTO users (primerNombre, segundoNombre, primerApellido, segundoApellido, email, password, role, recoveryCode)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+      `;
+        console.log('Añadiendo usuario a la base de datos...');
+
+        await SqliteService.db.run(query, [
+          primerNombre,
+          segundoNombre,
+          primerApellido,
+          segundoApellido,
+          email,
+          password,
+          role,
+          recoveryCode,
+        ]);
+
+        console.log('Usuario añadido exitosamente');
+        console.log('Usuario:', {
+          primerNombre,
+          segundoNombre,
+          primerApellido,
+          segundoApellido,
+          email,
+          password,
+          role,
+          recoveryCode,
+        });
+      } else {
+        throw new Error('Conexión a la base de datos no establecida');
       }
-    } else if(this.db && info.platform === 'web') {
-      const query = `
-      INSERT INTO users (primerNombre, segundoNombre, primerApellido, segundoApellido, email, password, codeRecovery, role)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?);
-        `;
-        await this.db.run(query, [primerNombre, segundoNombre, primerApellido, segundoApellido, email, password, codeRecovery, role]);
-        console.log('User added successfully');
-    }else{
-      throw new Error('Database connection not established');
+    } catch (error) {
+      const errMessage = (error as Error).message || 'Error desconocido';
+      console.error('Error al añadir el usuario:', errMessage);
+      throw error;
     }
   }
-  
+
+  static async getUserDetailsByEmail(email: string): Promise<any | null> {
+    console.log('getUserDetailsByEmail');
+    try {
+      await SqliteService.ensureDbReady();
+
+      const db = SqliteService.db;
+
+      if (!db) {
+        console.error('No se pudo obtener la conexión a la base de datos');
+        return null;
+      }
+
+      const query = `SELECT primerNombre, segundoNombre, primerApellido, segundoApellido, email, password, role, recoveryCode FROM users WHERE email = ?`;
+      const result = await db.query(query, [email]);
+
+      console.log('Resultado de la consulta:', result);
+
+      if (result?.values && result.values.length > 0) {
+        const userRow = result.values[0];
+
+        console.log('Verificando contenido de userRow:', userRow);
+
+        if (Array.isArray(userRow)) {
+          const user = {
+            primerNombre: userRow[0],
+            segundoNombre: userRow[1],
+            primerApellido: userRow[2],
+            segundoApellido: userRow[3],
+            email: userRow[4],
+            password: userRow[5],
+            role: userRow[6],
+            recoveryCode: userRow[7],
+          };
+          console.log('Usuario creado (array):', user);
+          return user;
+        } else if (typeof userRow === 'object') {
+          const user = {
+            primerNombre: userRow.primerNombre,
+            segundoNombre: userRow.segundoNombre,
+            primerApellido: userRow.primerApellido,
+            segundoApellido: userRow.segundoApellido,
+            email: userRow.email,
+            password: userRow.password,
+            role: userRow.role,
+            recoveryCode: userRow.recoveryCode,
+          };
+          console.log('Usuario creado (objeto):', user);
+          return user;
+        } else {
+          console.error(
+            'El formato de userRow no es ni array ni objeto:',
+            userRow
+          );
+          return null;
+        }
+      } else {
+        console.warn('No se encontró el usuario con el email proporcionado.');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error al recuperar detalles del usuario:', error);
+      return null;
+    }
+  }
 
   async updateUser(
     id: number,
-    primerNombre: string,
-    segundoNombre: string,
-    primerApellido: string,
-    segundoApellido: string,
-    email: string,
-    password?: string  
+    primerNombre?: string,
+    segundoNombre?: string,
+    primerApellido?: string,
+    segundoApellido?: string,
+    email?: string,
+    password?: string,
+    recoveryCode?: string
   ) {
-    if (this.db) {
+    console.log('updateUser');
+    if (!SqliteService.db || !SqliteService.isDbConnected) {
+      console.error('No hay conexión a la base de datos disponible.');
+      throw new Error('No hay conexión a la base de datos disponible.');
+    }
+    if (SqliteService.db) {
+      console.log('Updating user...');
       try {
-        let query = `
-          UPDATE users
-          SET primerNombre = ?, segundoNombre = ?, primerApellido = ?, segundoApellido = ?, email = ?
-          WHERE id = ?;
-        `;
-        let params = [primerNombre, segundoNombre, primerApellido, segundoApellido, email, id];
-  
-        if (password) {
-          const hashedPassword = await bcrypt.hash(password, 10);
-          query = `
-            UPDATE users
-            SET primerNombre = ?, segundoNombre = ?, primerApellido = ?, segundoApellido = ?, email = ?, password = ?
-            WHERE id = ?;
-          `;
-          params = [primerNombre, segundoNombre, primerApellido, segundoApellido, email, hashedPassword, id];
+        let query = 'UPDATE users SET ';
+        const params: any[] = [];
+
+        if (primerNombre) {
+          query += 'primerNombre = ?, ';
+          params.push(primerNombre);
         }
-  
-        await this.db.run(query, params);
+
+        if (segundoNombre) {
+          query += 'segundoNombre = ?, ';
+          params.push(segundoNombre);
+        }
+
+        if (primerApellido) {
+          query += 'primerApellido = ?, ';
+          params.push(primerApellido);
+        }
+
+        if (segundoApellido) {
+          query += 'segundoApellido = ?, ';
+          params.push(segundoApellido);
+        }
+
+        if (email) {
+          query += 'email = ?, ';
+          params.push(email);
+        }
+
+        if (password) {
+          query += 'password = ?, ';
+          params.push(password);
+        }
+
+        if (recoveryCode) {
+          query += 'recoveryCode = ?, ';
+          params.push(recoveryCode);
+        }
+
+        query = query.slice(0, -2);
+
+        query += ' WHERE id = ?';
+        params.push(id);
+
+        await SqliteService.db.run(query, params);
+        console.log('User updated successfully');
       } catch (error) {
         console.error('Error updating user', error);
         throw error;
@@ -214,80 +415,99 @@ export class SqliteService {
       throw new Error('Database connection not established');
     }
   }
-  
+
+  async getRecoveryCodeByEmail(email: string): Promise<string | null> {
+    console.log('getRecoveryCodeByEmail');
+    if (!SqliteService.db) {
+      throw new Error('Base de datos no está conectada');
+    }
+
+    const query = `SELECT recoveryCode FROM users WHERE email = ?`;
+    try {
+      const result = await SqliteService.db.query(query, [email]);
+      if (result.values && result.values.length > 0) {
+        return result.values[0][0];
+      } else {
+        return null;
+      }
+    } catch (error) {
+      console.error('Error al obtener el código de recuperación:', error);
+      throw error;
+    }
+  }
 
   async setPreference(key: string, value: string) {
+    console.log('setPreference');
     await Preferences.set({ key, value });
   }
 
   async getPreference(key: string): Promise<string | null> {
+    console.log('getPreference');
     const { value } = await Preferences.get({ key });
     return value;
   }
 
   async removePreference(key: string) {
+    console.log('removePreference');
     await Preferences.remove({ key });
   }
 
-  async saveConfiguration(dbName: string, encryptionKey: string) {
+  async saveConfiguration(dbName: string) {
+    console.log('saveConfiguration');
     try {
-      
       await Preferences.set({ key: 'dbName', value: dbName });
-      const info = await Device.getInfo();
-      if(this.isIOS || info.platform === 'android'){
-        await Preferences.set({ key: 'encryptionKey', value: encryptionKey });
-      }else{
-
-      }
       console.log('Configuración guardada exitosamente');
     } catch (error) {
-      console.error('Error al guardar la configuración:', error);
+      console.error(
+        'Error al guardar la configuración:',
+        (error as Error).message || 'Error desconocido'
+      );
     }
   }
 
-  
-  async loadConfigurationWeb() {
+  static async loadConfiguration() {
+    console.log('loadConfiguration');
     try {
       const { value: dbName } = await Preferences.get({ key: 'dbName' });
-      
       return {
-      dbName: dbName ?? this.defaultDbName,
-        };
+        dbName: dbName ?? SqliteService.defaultDbName,
+      };
     } catch (error) {
-      console.error('Error al cargar la configuración:', error);
+      console.error(
+        'Error al cargar la configuración:',
+        (error as Error).message || 'Error desconocido'
+      );
       return {
-        dbName: this.defaultDbName,
-        
+        dbName: SqliteService.defaultDbName,
       };
     }
   }
 
-  async loadConfigurationPhone() {
+  async getAllUsers(): Promise<any[]> {
+    console.log('getAllUsers');
     try {
-      const { value: dbName } = await Preferences.get({ key: 'dbName' });
-      
-      const { value: encryptionKey } = await Preferences.get({ key: 'encryptionKey' });
-      return {
-        dbName: dbName ?? this.defaultDbName,
-        encryptionKey: encryptionKey ?? this.defaultEncryptionKey
-      };
-      
-      
+      await SqliteService.ensureDbReady();
+
+      if (!SqliteService.db) {
+        console.error('No se pudo obtener la conexión a la base de datos');
+        return [];
+      }
+
+      const query = `SELECT * FROM users`;
+
+      const result = await SqliteService.db.query(query);
+
+      console.log('Result:', result);
+
+      if (result.values && result.values.length > 0) {
+        return result.values;
+      } else {
+        console.warn('No se encontraron usuarios en la tabla.');
+        return [];
+      }
     } catch (error) {
-      console.error('Error al cargar la configuración:', error);
-      return {
-        dbName: this.defaultDbName,
-        encryptionKey: this.defaultEncryptionKey
-      };
+      console.error('Error al obtener todos los usuarios:', error);
+      return [];
     }
   }
-
-  private async isEncryptionSupported(): Promise<boolean> {
-    const info = await Device.getInfo();
-    return this.isIOS || info.platform === 'android';
-  }
-  
-
 }
-
-

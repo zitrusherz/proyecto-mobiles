@@ -1,36 +1,43 @@
-import { Injectable } from '@angular/core';
-import { CanActivate, Router } from '@angular/router';
-import { AuthenticationStateService } from '../services/authentication-state.service';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import {Injectable} from '@angular/core';
+import {ActivatedRouteSnapshot, CanActivate, Router, RouterStateSnapshot,} from '@angular/router';
+import {Observable} from 'rxjs';
+import {map} from 'rxjs/operators';
+import {AuthService} from '../services/auth.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthGuard implements CanActivate {
-
   constructor(
-    private authStateService: AuthenticationStateService,
-    private router: Router
+    private readonly authService: AuthService,
+    private readonly router: Router
   ) {}
 
-  canActivate(): Observable<boolean> {
-    return this.authStateService.isAuthenticated$.pipe(
-      map(isAuthenticated => {
-        if (!isAuthenticated) {
-          // Si no está autenticado, lo redirigimos a la página de login
+  canActivate(
+    route: ActivatedRouteSnapshot,
+    state: RouterStateSnapshot
+  ): Observable<boolean> {
+    return this.authService.isAuthenticated$.pipe(
+      map((isAuthenticated) => {
+        const isPublicRoute = route.data['public'] || false;
+        const isQrPage = route.url.some((segment) => segment.path === 'qr');
+
+        if (isQrPage && !isAuthenticated) {
           this.router.navigate(['/login']);
-          return false; // Bloquea acceso a las rutas protegidas
+          return false;
         }
 
-        // Si ya está autenticado y está intentando acceder a login o register, redirige a home-page
-        const currentUrl = this.router.url;
-        if (currentUrl === '/login' || currentUrl === '/register' || currentUrl === '/password-recovery') {
-          this.router.navigate(['/home-page']);
-          return false; // Bloquea acceso a login/register si ya está autenticado
+        if (isAuthenticated && isPublicRoute) {
+          this.router.navigate(['/home']);
+          return false;
         }
 
-        return true; // Permitir acceso a las rutas protegidas
+        if (!isAuthenticated && !isPublicRoute) {
+          this.router.navigate(['/login']);
+          return false;
+        }
+
+        return true;
       })
     );
   }

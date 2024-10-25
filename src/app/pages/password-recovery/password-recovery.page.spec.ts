@@ -1,5 +1,5 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { PasswordRecoveryPage } from './password-recovery.page';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {PasswordRecoveryPage} from './password-recovery.page';
 
 describe('PasswordRecoveryPage', () => {
   let component: PasswordRecoveryPage;

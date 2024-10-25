@@ -1,9 +1,8 @@
-import { Component, OnInit } from '@angular/core';
-import { NavController } from '@ionic/angular';
-import { ActivatedRoute } from '@angular/router';
-import { SqliteService } from 'src/app/services/sqlite.service';
-import { AuthService } from 'src/app/services/auth.service';
-
+import {Component, OnInit} from '@angular/core';
+import {NavController} from '@ionic/angular';
+import {UserService} from 'src/app/services/user.service';
+import {User} from 'src/app/interface/user';
+import {Subscription} from 'rxjs';
 
 @Component({
   selector: 'app-home-page',
@@ -11,48 +10,46 @@ import { AuthService } from 'src/app/services/auth.service';
   styleUrls: ['./home-page.page.scss'],
 })
 export class HomePagePage implements OnInit {
-  usuario: any;
-  constructor(private navCtrl: NavController, private route: ActivatedRoute,private sqliteService: SqliteService,
-    private authService: AuthService ) {}
+  usuario: User | null = null;
+  userSubscription!: Subscription;
+
+  constructor(
+    private navCtrl: NavController,
+    private userService: UserService
+  ) {}
 
   ngOnInit() {
-    
-    this.loadUserData();
+    this.loadUser();
   }
 
-  async loadUserData() {
-    try {
-      
-      if (this.sqliteService.dbReady.getValue()) {
-        
-        const email = await this.authService.isAuthenticated$.toPromise();
-
-        
-        const query = `SELECT primerNombre, segundoNombre, primerApellido, segundoApellido, email FROM users WHERE email = ?`;
-        const result = await this.sqliteService.getDbConnection()?.query(query, [email]);
-
-        if (result && result.values && result.values.length > 0) {
-          const userData = result.values[0];
-          this.usuario = {
-            nombre: userData.primerNombre,
-            segundoNombre: userData.segundoNombre,
-            primerApellido: userData.primerApellido,
-            segundoApellido: userData.segundoApellido,
-            email: userData.email,
-            rol: this.getRolFromEmail(userData.email)
-          };
-        } else {
-          console.error('No se encontró el usuario en la base de datos.');
-        }
-      } else {
-        console.error('Base de datos no está lista.');
-      }
-    } catch (error) {
-      console.error('Error al cargar los datos del usuario:', error);
+  ngOnDestroy() {
+    if (this.userSubscription) {
+      this.userSubscription.unsubscribe();
     }
   }
 
-  getRolFromEmail(email: string): string {
+  async loadUser() {
+    try {
+      // Suscribimos al Observable para cargar los detalles del usuario
+      this.userSubscription = this.userService.getUser().subscribe(
+        (user) => {
+          if (user) {
+            this.usuario = user;
+            console.log('Usuario cargado correctamente:', this.usuario);
+          } else {
+            console.error('No se encontró un usuario registrado');
+          }
+        },
+        (error) => {
+          console.error('Error al cargar el usuario en HomePage:', error);
+        }
+      );
+    } catch (error) {
+      console.error('Error al cargar el usuario en HomePage:', error);
+    }
+  }
+
+  getRoleFromEmail(email: string): string {
     if (email.endsWith('@profesor.duoc.cl')) {
       return 'profesor';
     } else if (email.endsWith('@duocuc.cl')) {
@@ -61,4 +58,3 @@ export class HomePagePage implements OnInit {
     return 'usuario';
   }
 }
-
