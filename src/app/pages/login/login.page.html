@@ -1,12 +1,19 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
-    <ion-title class="custom-title">Iniciar Sesión - RegistrAPP</ion-title>
+    <ion-title class="custom-title">
+      Iniciar Sesión - RegistrAPP
+    </ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true" class="login-background ion-padding">
 
   <div class="login-container">
+
+    <!-- Imagen centrada -->
+    <div class="image-container">
+      <img src="assets/imgs/logo.jpg" alt="Logo" class="login-logo" />
+    </div>
 
     <form (ngSubmit)="loginUser()">
       <ion-item class="custom-item">

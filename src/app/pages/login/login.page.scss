@@ -1,0 +1,31 @@
+.custom-title {
+    justify-content: left;
+    font-size: 24px; /* Tamaño por defecto para pantallas medianas */
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+
+.image-container {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0; /* Espacio superior e inferior */
+}
+
+@media (max-width: 600px) and (max-height: 800px) {
+    .custom-title {
+      font-size: 18px; /* Para pantallas con ancho menor a 600px y altura menor a 800px */
+    }
+}
+
+@media (min-width: 1024px) and (min-height: 1200px) {
+    .custom-title {
+      font-size: 32px; /* Para pantallas grandes tanto en ancho como en alto */
+    }
+}
+
+.custom-item {
+  min-width: 200px;
+  max-width: auto; 
+  width: auto;
+  margin: 20px auto; 
+  white-space: nowrap;
+}
