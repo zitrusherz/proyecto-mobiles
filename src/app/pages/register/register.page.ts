@@ -1,15 +1,11 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { AuthService } from 'src/app/services/auth.service';
-import {
-  NavController,
-  ToastController,
-  LoadingController,
-} from '@ionic/angular';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { CustomEmailValidators } from 'src/app/validators/email-validator';
-import { CustomPasswordValidators } from 'src/app/validators/password-validator';
-import { debounceTime, Subscription } from 'rxjs';
-import { Requirements } from 'src/app/interface/password-req.interface';
+import {Component, OnDestroy, OnInit} from '@angular/core';
+import {AuthService} from 'src/app/services/auth.service';
+import {LoadingController, NavController, ToastController,} from '@ionic/angular';
+import {FormBuilder, FormGroup, Validators} from '@angular/forms';
+import {CustomEmailValidators} from 'src/app/validators/email-validator';
+import {CustomPasswordValidators} from 'src/app/validators/password-validator';
+import {debounceTime, Subscription} from 'rxjs';
+import {Requirements} from 'src/app/interface/password-req.interface';
 
 
 @Component({
@@ -149,10 +145,10 @@ export class RegisterPage implements OnInit, OnDestroy {
           this.recoveryCode
         );
 
-        console.log('Mensaje de registro:', resultMessage); 
-        await this.presentToast(resultMessage);
 
-        if (resultMessage === 'User successfully registered') {
+        await this.presentToast('Registro exitoso');
+
+        if (resultMessage) {
           console.log('Redirigiendo a la página de login...');
           this.goToLogin();
           this.registerForm.reset();
@@ -170,7 +166,7 @@ export class RegisterPage implements OnInit, OnDestroy {
         this.isLoading = false;
       }
     } else {
-      console.log('Formulario inválido'); // Nueva traza
+      console.log('Formulario inválido');
     }
   }
 
@@ -180,7 +176,7 @@ export class RegisterPage implements OnInit, OnDestroy {
   }
 
   goToLogin() {
-    this.navCtrl.navigateRoot('/'); 
+    this.navCtrl.navigateRoot('/');
   }
 
   validatePassword(password: string) {

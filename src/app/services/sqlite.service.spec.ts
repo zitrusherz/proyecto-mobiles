@@ -1,6 +1,6 @@
-import { TestBed } from '@angular/core/testing';
+import {TestBed} from '@angular/core/testing';
 
-import { SqliteService } from './sqlite.service';
+import {SqliteService} from './sqlite.service';
 
 describe('SqliteService', () => {
   let service: SqliteService;

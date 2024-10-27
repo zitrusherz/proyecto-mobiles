@@ -1,28 +1,24 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
-import { Device } from '@capacitor/device';
-import {
-  CapacitorSQLite,
-  SQLiteDBConnection,
-  SQLiteConnection,
-} from '@capacitor-community/sqlite';
-import { Preferences } from '@capacitor/preferences';
+import {Injectable} from '@angular/core';
+import {BehaviorSubject} from 'rxjs';
+import {Device} from '@capacitor/device';
+import {CapacitorSQLite, SQLiteConnection, SQLiteDBConnection,} from '@capacitor-community/sqlite';
+import {Preferences} from '@capacitor/preferences';
 
 @Injectable({
   providedIn: 'root',
 })
 export class SqliteService {
   public static readonly dbReady: BehaviorSubject<boolean> =
-    new BehaviorSubject(false); // Static para mantener una única referencia global
-  private static db?: SQLiteDBConnection; // Static para evitar recrear múltiples conexiones
+    new BehaviorSubject(false);
+  private static db?: SQLiteDBConnection;
   public static isWeb: boolean = false;
   public static isIOS: boolean = false;
-  private static readonly defaultDbName: string = 'RegistrAPP'; // Mantener la consistencia en el nombre de la DB
+  private static readonly defaultDbName: string = 'RegistrAPP';
   public static isDbConnected: boolean = false;
 
   constructor() {
     console.log('constructor');
-    this.init(); // Inicialización automática
+    this.init();
   }
 
   async init() {
@@ -33,7 +29,6 @@ export class SqliteService {
     if (info.platform === 'android') {
       try {
         await sqlite.requestPermissions();
-        // Ahora `ensureDbReady` es static, por lo que se llama a través de la clase
         await SqliteService.ensureDbReady();
       } catch (e) {
         console.error(
@@ -42,7 +37,7 @@ export class SqliteService {
         );
       }
     } else if (info.platform === 'web') {
-      SqliteService.isWeb = true; // Cambiamos `this.isWeb` a static
+      SqliteService.isWeb = true;
       try {
         await sqlite.initWebStore();
         await SqliteService.ensureDbReady();
@@ -51,7 +46,7 @@ export class SqliteService {
         console.error(e);
       }
     } else if (info.platform === 'ios') {
-      SqliteService.isIOS = true; // Cambiamos `this.isIOS` a static
+      SqliteService.isIOS = true;
       await SqliteService.ensureDbReady();
     }
   }
@@ -95,19 +90,16 @@ export class SqliteService {
   static async ensureDbReady(): Promise<void> {
     console.log('ensureDbReady called');
 
-    // Si la base de datos ya está lista, no hacemos nada
     if (SqliteService.dbReady.getValue()) {
       console.log('Base de datos ya está lista.');
       return;
     }
 
-    // Verificamos si ya se estableció la conexión
     if (!SqliteService.db) {
       console.log('Obteniendo conexión a la base de datos...');
       SqliteService.db = await SqliteService.getDbConnection();
     }
 
-    // Si la conexión no está lista, inicializamos la base de datos
     if (!SqliteService.isDbConnected) {
       try {
         console.log('Inicializando la base de datos...');
@@ -201,10 +193,8 @@ export class SqliteService {
     console.log('userExists');
 
     try {
-      // Asegurar que la base de datos esté lista
       await SqliteService.ensureDbReady();
 
-      // Verifica si la conexión sigue disponible
       if (!SqliteService.db) {
         console.error('No se pudo obtener la conexión a la base de datos');
         return false;
@@ -248,7 +238,6 @@ export class SqliteService {
       throw new Error('No hay conexión a la base de datos disponible.');
     }
     try {
-      // Verificamos que la base de datos esté lista antes de continuar
       await SqliteService.ensureDbReady();
 
       if (SqliteService.db) {
@@ -258,7 +247,6 @@ export class SqliteService {
       `;
         console.log('Añadiendo usuario a la base de datos...');
 
-        // Ejecutamos la consulta
         await SqliteService.db.run(query, [
           primerNombre,
           segundoNombre,
@@ -438,9 +426,9 @@ export class SqliteService {
     try {
       const result = await SqliteService.db.query(query, [email]);
       if (result.values && result.values.length > 0) {
-        return result.values[0][0]; // Devuelve el código de recuperación
+        return result.values[0][0];
       } else {
-        return null; // Si no se encuentra el usuario, devuelve null
+        return null;
       }
     } catch (error) {
       console.error('Error al obtener el código de recuperación:', error);
@@ -482,7 +470,7 @@ export class SqliteService {
     try {
       const { value: dbName } = await Preferences.get({ key: 'dbName' });
       return {
-        dbName: dbName ?? SqliteService.defaultDbName, // Usamos la variable estática
+        dbName: dbName ?? SqliteService.defaultDbName,
       };
     } catch (error) {
       console.error(
@@ -490,7 +478,7 @@ export class SqliteService {
         (error as Error).message || 'Error desconocido'
       );
       return {
-        dbName: SqliteService.defaultDbName, // Usamos la variable estática
+        dbName: SqliteService.defaultDbName,
       };
     }
   }
@@ -498,17 +486,16 @@ export class SqliteService {
   async getAllUsers(): Promise<any[]> {
     console.log('getAllUsers');
     try {
-      await SqliteService.ensureDbReady(); // Usamos la función estática ensureDbReady
+      await SqliteService.ensureDbReady();
 
       if (!SqliteService.db) {
-        // Usamos la variable estática db
         console.error('No se pudo obtener la conexión a la base de datos');
         return [];
       }
 
       const query = `SELECT * FROM users`;
 
-      const result = await SqliteService.db.query(query); // Usamos la conexión estática db
+      const result = await SqliteService.db.query(query);
 
       console.log('Result:', result);
 

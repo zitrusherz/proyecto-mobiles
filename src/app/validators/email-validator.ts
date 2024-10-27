@@ -1,4 +1,4 @@
-import { AbstractControl, ValidationErrors } from '@angular/forms';
+import {AbstractControl, ValidationErrors} from '@angular/forms';
 
 export class CustomEmailValidators {
   private static readonly profesorRegex =

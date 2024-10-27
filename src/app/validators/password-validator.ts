@@ -1,4 +1,4 @@
-import { AbstractControl, ValidationErrors } from '@angular/forms';
+import {AbstractControl, ValidationErrors} from '@angular/forms';
 
 export class CustomPasswordValidators {
   // Validador principal para verificar los criterios de seguridad de la contraseña

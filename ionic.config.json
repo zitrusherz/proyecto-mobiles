@@ -1,8 +1,5 @@
 {
-  "name": "capacitor",
-  "integrations": {
-    "capacitor": {}
-  },
-  "type": "angular",
-  "id": "a531acb6"
+  "name": "ionic-app-base",
+  "integrations": {},
+  "type": "angular-standalone"
 }

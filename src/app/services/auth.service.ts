@@ -1,78 +1,112 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
-import { SqliteService } from './sqlite.service';
-import { Device } from '@capacitor/device';
-import { CustomEmailValidators } from '../validators/email-validator';
-import { CustomPasswordValidators } from '../validators/password-validator';
-import { Preferences } from '@capacitor/preferences';
-import { Router } from '@angular/router';
-import { UserService } from './user.service';
-import { User } from '../interface/user';
-import { NavController } from '@ionic/angular';
+import {Injectable} from '@angular/core';
+import {BehaviorSubject} from 'rxjs';
+import {SqliteService} from './sqlite.service';
+import {SupabaseService} from './supabase.service';
+import {Device} from '@capacitor/device';
+import {CustomEmailValidators} from '../validators/email-validator';
+import {CustomPasswordValidators} from '../validators/password-validator';
+import {Preferences} from '@capacitor/preferences';
+import {Router} from '@angular/router';
+import {UserService} from './user.service';
+import {User as AppUser} from '../interface/user';
+import {NavController} from '@ionic/angular';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
-  private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
+  private readonly isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
   private isWeb: boolean = false;
 
   constructor(
     private readonly userService: UserService,
     private readonly sqliteService: SqliteService,
+    private readonly supabaseService: SupabaseService,
     private readonly router: Router,
-    private navCtrl: NavController
+    private readonly navCtrl: NavController
   ) {
-    this.initializePlatform();
+    this.initialize();
+
     console.log('AuthService initialized');
   }
 
+  private async initialize() {
+    try {
+      await this.initializePlatform();
+      await this.checkAuthentication();
+    } catch (error) {
+      console.error('Error during AuthService initialization:', error);
+    }
+  }
+
   setAuthenticated(state: boolean): void {
-    console.log('setAuthenticated');
     this.isAuthenticatedSubject.next(state);
     console.log('User authenticated:', state);
   }
 
-  async initializePlatform() {
-    console.log('initializePlatform');
+  private async initializePlatform() {
     const info = await Device.getInfo();
-    console.log('Device info:', info);
     this.isWeb = info.platform === 'web';
     await this.sqliteService.init();
-    console.log('SQLite initialized in initializePlatform');
   }
 
-  async login(email: string, password: string): Promise<boolean> {
-    console.log('login');
+  async login(
+    email: string,
+    password: string,
+    rememberMe: boolean
+  ): Promise<boolean> {
     console.log('Attempting to log in with email:', email);
 
     try {
-      const isValid = await this.validateUser(email, password);
-      if (isValid) {
-        console.log('User successfully validated');
+      let user: AppUser | null = null;
 
-        const user = await SqliteService.getUserDetailsByEmail(email);
-
-        if (user) {
-          console.log('User found after successful validation');
-
+      if (rememberMe) {
+        user = await SqliteService.getUserDetailsByEmail(email);
+        if (user && user.password === password) {
+          console.log('User authenticated locally (SQLite)');
           this.userService.setUser(user);
-
-          await this.storeUserSession(user);
-
-          await this.setAuthenticatedState(true);
-
           this.setAuthenticated(true);
-
-          console.log('User authenticated');
           return true;
-        } else {
-          console.error('User not found after validation.');
-          return false;
         }
+      }
+
+      const { data, error } = await this.supabaseService.signIn(
+        email,
+        password
+      );
+      if (error) {
+        console.error('Error during Supabase sign-in:', error.message);
+        return false;
+      }
+
+      if (data && data.user) {
+        console.log('User authenticated with Supabase');
+
+        const userProfile = await this.supabaseService.getUserProfile(
+          data.user.id
+        );
+
+        const appUser: AppUser = this.mapSupabaseUserToAppUser(userProfile);
+
+        if (rememberMe) {
+          await this.sqliteService.addUser(
+            appUser.primerNombre,
+            appUser.segundoNombre ?? '',
+            appUser.primerApellido,
+            appUser.segundoApellido ?? '',
+            appUser.email,
+            password,
+            appUser.role,
+            appUser.recoveryCode ?? ''
+          );
+        }
+
+        this.userService.setUser(appUser);
+        this.setAuthenticated(true);
+        return true;
       } else {
-        console.log('Password is invalid or user was not found.');
+        console.log('User not found in Supabase.');
         this.setAuthenticated(false);
         return false;
       }
@@ -80,6 +114,13 @@ export class AuthService {
       console.error('Error during login:', error);
       return false;
     }
+  }
+
+  private async handleSuccessfulLogin(user: AppUser) {
+    console.log('Handling successful login');
+    this.userService.setUser(user);
+    await this.storeUserSession(user);
+    this.setAuthenticated(true);
   }
 
   async setAuthenticatedState(isAuthenticated: boolean) {
@@ -114,46 +155,44 @@ export class AuthService {
         const userRow = result.values[0];
         console.log('User row content:', userRow);
 
+        let user: AppUser;
+
         if (Array.isArray(userRow)) {
-          const user = this.userService.createUser(
-            userRow[0], // primerNombre
-            userRow[1], // segundoNombre
-            userRow[2], // primerApellido
-            userRow[3], // segundoApellido
-            userRow[4], // email
-            userRow[5], // password
-            userRow[6], // role
-            userRow[7] // recoveryCode
-          );
+          user = {
+            primerNombre: userRow[0],
+            segundoNombre: userRow[1],
+            primerApellido: userRow[2],
+            segundoApellido: userRow[3],
+            email: userRow[4],
+            password: userRow[5],
+            role: userRow[6],
+            recoveryCode: userRow[7],
+          };
 
           console.log('User created (array):', user);
-
-          this.userService.setUser(user);
-
-          await this.storeUserSession(user);
         } else if (typeof userRow === 'object') {
-          const user = this.userService.createUser(
-            userRow.primerNombre,
-            userRow.segundoNombre,
-            userRow.primerApellido,
-            userRow.segundoApellido,
-            userRow.email,
-            userRow.password,
-            userRow.role,
-            userRow.recoveryCode
-          );
+          user = {
+            primerNombre: userRow.primerNombre,
+            segundoNombre: userRow.segundoNombre,
+            primerApellido: userRow.primerApellido,
+            segundoApellido: userRow.segundoApellido,
+            email: userRow.email,
+            password: userRow.password,
+            role: userRow.role,
+            recoveryCode: userRow.recoveryCode,
+          };
 
           console.log('User created (object):', user);
-
-          this.userService.setUser(user);
-
-          await this.storeUserSession(user);
         } else {
           console.error(
             'User row format is neither array nor object:',
             userRow
           );
+          return;
         }
+
+        this.userService.setUser(user);
+        await this.storeUserSession(user);
       } else {
         console.warn('User not found in the database');
       }
@@ -181,7 +220,7 @@ export class AuthService {
       const recoveryCode = await this.sqliteService.getRecoveryCodeByEmail(
         email
       );
-      return recoveryCode ? recoveryCode : null;
+      return recoveryCode;
     } catch (error) {
       console.error('Error getting recovery code:', error);
       throw new Error('Error retrieving recovery code. Please try later.');
@@ -255,6 +294,9 @@ export class AuthService {
       }
       const query = `SELECT password FROM users WHERE email = ?`;
       const result = await db.query(query, [email]);
+
+      console.log('Query result:', result);
+
       if (result.values && result.values.length > 0) {
         const storedPassword = result.values[0].password;
         const isPasswordValid = storedPassword === password;
@@ -277,33 +319,68 @@ export class AuthService {
     email: string,
     password: string,
     recoveryCode: string
-  ): Promise<string> {
+  ): Promise<boolean | string> {
     console.log('registerUser');
     try {
       await SqliteService.ensureDbReady();
+
       if (!this.validateEmailFormat(email)) {
         return 'Invalid email format.';
       }
+
       const passwordValidationResult =
         CustomPasswordValidators.passwordValidator({ value: password } as any);
       if (passwordValidationResult !== null) {
         return passwordValidationResult['invalidPassword'];
       }
-      const userExists = await this.sqliteService.userExists(email);
-      if (userExists) {
-        return 'User already registered.';
-      }
-      await this.sqliteService.addUser(
-        primerNombre.toLowerCase(),
-        segundoNombre.toLowerCase(),
-        primerApellido.toLowerCase(),
-        segundoApellido.toLowerCase(),
-        email.toLowerCase(),
-        password,
-        this.getRoleFromEmail(email),
-        recoveryCode
+
+      const userExistsInSupabase = await this.supabaseService.userExists(
+        email.toLowerCase()
       );
-      return 'User successfully registered';
+      if (userExistsInSupabase) {
+         console.log('User already registered in Supabase.');
+      }
+
+      try {
+        await this.supabaseService.addUser({
+          primerNombre: primerNombre.toLowerCase(),
+          segundoNombre: segundoNombre ? segundoNombre.toLowerCase() : '',
+          primerApellido: primerApellido.toLowerCase(),
+          segundoApellido: segundoApellido.toLowerCase(),
+          email: email.toLowerCase(),
+          password: password,
+          role: this.getRoleFromEmail(email),
+          recoveryCode: recoveryCode,
+        });
+
+        console.log('User successfully registered in Supabase.');
+
+        const userExistsInSQLite = await this.sqliteService.userExists(
+          email.toLowerCase()
+        );
+        if (userExistsInSQLite) {
+          console.log('User already registered locally.');
+        }
+
+        await this.sqliteService.addUser(
+          primerNombre.toLowerCase(),
+         segundoNombre.toLowerCase(),
+           primerApellido.toLowerCase(),
+           segundoApellido.toLowerCase(),
+           email.toLowerCase(),
+           password,
+           this.getRoleFromEmail(email),
+           recoveryCode,
+        );
+
+        console.log(
+          'User successfully registered in both Supabase and SQLite.'
+        );
+        return true;
+      } catch (supabaseError) {
+        console.error('Error registering user in Supabase:', supabaseError);
+        return 'Error registering user in Supabase.';
+      }
     } catch (error) {
       console.error('Error registering user:', error);
       return 'Error registering user. Please try again.';
@@ -336,30 +413,36 @@ export class AuthService {
 
   async storeUserSession(user: any): Promise<void> {
     console.log('storeUserSession');
-    if (
-      !user.email ||
-      !user.primerNombre ||
-      !user.primerApellido ||
-      !user.role
-    ) {
-      console.error('Incomplete or invalid user data', user);
-      return;
-    }
     try {
+      if (
+        !user.email ||
+        !user.primerNombre ||
+        !user.primerApellido ||
+        !user.role
+      ) {
+        console.error('User object is missing required properties');
+        throw new Error('Invalid user object');
+      }
+
       const userData = {
         email: user.email,
-        role: user.role,
         primerNombre: user.primerNombre,
+        segundoNombre: user.segundoNombre || '',
         primerApellido: user.primerApellido,
-        segundoApellido: user.segundoApellido,
-        recoveryCode: user.recoveryCode,
+        segundoApellido: user.segundoApellido || '',
+        role: user.role,
+        recoveryCode: user.recoveryCode || '',
       };
+
       await Preferences.set({
         key: 'userSession',
         value: JSON.stringify(userData),
       });
+
       await Preferences.set({ key: 'isAuthenticated', value: 'true' });
+
       this.userService.setUser(user);
+
       console.log('User and session stored successfully.');
     } catch (error) {
       console.error('Error storing user session:', error);
@@ -372,7 +455,7 @@ export class AuthService {
     return value === 'true';
   }
 
-  async getUserSession(): Promise<User | null> {
+  async getUserSession(): Promise<AppUser | null> {
     console.log('getUserSession');
     try {
       const { value } = await Preferences.get({ key: 'userSession' });
@@ -383,16 +466,19 @@ export class AuthService {
       if (!userData.email || !userData.role) {
         return null;
       }
-      return this.userService.createUser(
-        userData.primerNombre,
-        userData.segundoNombre || '',
-        userData.primerApellido,
-        userData.segundoApellido || '',
-        userData.email,
-        '',
-        userData.role,
-        userData.recoveryCode || ''
-      );
+
+      const user: AppUser = {
+        primerNombre: userData.primerNombre,
+        segundoNombre: userData.segundoNombre || '',
+        primerApellido: userData.primerApellido,
+        segundoApellido: userData.segundoApellido || '',
+        email: userData.email,
+        password: '',
+        role: userData.role,
+        recoveryCode: userData.recoveryCode || '',
+      };
+
+      return user;
     } catch (error) {
       console.error('Error getting user session:', error);
       return null;
@@ -407,10 +493,25 @@ export class AuthService {
       if (userData) {
         this.userService.setUser(userData);
         this.navCtrl.navigateRoot('/home-page');
+      } else {
+        this.navCtrl.navigateRoot('/login');
       }
     } else {
       this.navCtrl.navigateRoot('/login');
     }
+  }
+
+  private mapSupabaseUserToAppUser(userProfile: any): AppUser {
+    return {
+      email: userProfile.email,
+      primerNombre: userProfile.primerNombre,
+      segundoNombre: userProfile.segundoNombre || '',
+      primerApellido: userProfile.primerApellido,
+      segundoApellido: userProfile.segundoApellido,
+      password: '',
+      role: userProfile.role,
+      recoveryCode: userProfile.recoveryCode,
+    };
   }
 
   async clearSession(): Promise<boolean> {

@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { NavController, ToastController } from '@ionic/angular';
-import { AuthService } from 'src/app/services/auth.service';
+import {Component, OnInit} from '@angular/core';
+import {FormBuilder, FormGroup, Validators} from '@angular/forms';
+import {NavController, ToastController} from '@ionic/angular';
+import {AuthService} from 'src/app/services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -31,13 +31,11 @@ export class LoginPage implements OnInit {
     if (this.loginForm.valid) {
       const { email, password } = this.loginForm.value;
 
-      // Empieza la carga
       this.isLoading = true;
 
       try {
-        const isAuthenticated = await this.authService.login(email, password);
+        const isAuthenticated = await this.authService.login(email, password, true);
 
-        // Termina la carga
         this.isLoading = false;
 
         if (isAuthenticated) {
@@ -46,18 +44,15 @@ export class LoginPage implements OnInit {
           this.handleLoginFailure();
         }
       } catch (error: any) {
-        // Cambiamos el tipo de error a 'any'
         console.error('Error during login:', error);
         let errorMessage = 'Error al intentar iniciar sesión.';
 
-        // Comprobamos si es un error de red
         if (error.message && error.message.includes('network')) {
           errorMessage = 'Error de red. Verifique su conexión.';
         }
 
         await this.presentToast(errorMessage);
 
-        // Termina la carga en caso de error
         this.isLoading = false;
       }
     } else {

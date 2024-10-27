@@ -1,10 +1,10 @@
-import { Component, OnInit } from '@angular/core';
-import { AlertController, NavController } from '@ionic/angular';
-import { AuthService } from 'src/app/services/auth.service'; // Usar AuthService en lugar de UserService
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { CustomEmailValidators } from 'src/app/validators/email-validator';
-import { CustomPasswordValidators } from 'src/app/validators/password-validator';
-import { Requirements } from 'src/app/interface/password-req.interface'; // Importa la interfaz de requisitos de contraseña
+import {Component, OnInit} from '@angular/core';
+import {AlertController, NavController} from '@ionic/angular';
+import {AuthService} from 'src/app/services/auth.service'; // Usar AuthService en lugar de UserService
+import {FormBuilder, FormGroup, Validators} from '@angular/forms';
+import {CustomEmailValidators} from 'src/app/validators/email-validator';
+import {CustomPasswordValidators} from 'src/app/validators/password-validator';
+import {Requirements} from 'src/app/interface/password-req.interface'; // Importa la interfaz de requisitos de contraseña
 
 @Component({
   selector: 'app-password-recovery',

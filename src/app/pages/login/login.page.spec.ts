@@ -1,9 +1,9 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { IonicModule } from '@ionic/angular';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {IonicModule} from '@ionic/angular';
 
-import { ExploreContainerComponentModule } from '../explore-container/explore-container.module';
+import {ExploreContainerComponentModule} from '../explore-container/explore-container.module';
 
-import { LoginPage } from './login.page';
+import {LoginPage} from './login.page';
 
 describe('LoginPage', () => {
   let component: LoginPage;

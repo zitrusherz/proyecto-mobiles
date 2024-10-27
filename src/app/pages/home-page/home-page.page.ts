@@ -1,8 +1,8 @@
-import { Component, OnInit } from '@angular/core';
-import { NavController } from '@ionic/angular';
-import { UserService } from 'src/app/services/user.service';
-import { User } from 'src/app/interface/user';
-import { Subscription } from 'rxjs';
+import {Component, OnInit} from '@angular/core';
+import {NavController} from '@ionic/angular';
+import {UserService} from 'src/app/services/user.service';
+import {User} from 'src/app/interface/user';
+import {Subscription} from 'rxjs';
 
 @Component({
   selector: 'app-home-page',

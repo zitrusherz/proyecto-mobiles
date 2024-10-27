@@ -1,10 +1,12 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Device } from '@capacitor/device';
-import { Platform, NavController, LoadingController } from '@ionic/angular';
-import { SqliteService } from './services/sqlite.service';
-import { AuthService } from './services/auth.service';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Subscription } from 'rxjs';
+import {Component, OnDestroy, OnInit, ViewChild} from '@angular/core';
+import {Device} from '@capacitor/device';
+import {IonToast, LoadingController, NavController, Platform,} from '@ionic/angular';
+import {SqliteService} from './services/sqlite.service';
+import {defineCustomElements as jeepSqlite} from 'jeep-sqlite/loader';
+import {AuthService} from './services/auth.service';
+import {FormBuilder, FormGroup, Validators} from '@angular/forms';
+import {Subject} from 'rxjs';
+import {takeUntil} from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
@@ -12,21 +14,21 @@ import { Subscription } from 'rxjs';
   styleUrls: ['app.component.scss'],
 })
 export class AppComponent implements OnInit, OnDestroy {
+  @ViewChild('toastElement', { static: false }) toast!: IonToast;
   public isWeb: boolean;
   public load: boolean;
-  public jeepSqliteAvailable: boolean = false; // Nueva propiedad para verificar disponibilidad
+  public jeepSqliteAvailable: boolean = false;
   form!: FormGroup;
   submitted = false;
-  private dbReadySubscription!: Subscription;
-  private authSubscription!: Subscription;
+  private readonly destroy$ = new Subject<void>();
 
   constructor(
-    private platform: Platform,
-    private sqlite: SqliteService,
-    private authService: AuthService,
-    private navCtrl: NavController,
-    private loadingCtrl: LoadingController,
-    private formBuilder: FormBuilder
+    private readonly platform: Platform,
+    private readonly sqlite: SqliteService,
+    private readonly authService: AuthService,
+    private readonly navCtrl: NavController,
+    private readonly loadingCtrl: LoadingController,
+    private readonly formBuilder: FormBuilder
   ) {
     console.log('AppComponent constructor');
     this.isWeb = false;
@@ -34,24 +36,18 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
-    console.log('ngOnInit');
+    console.log('ngOnInit - Initializing jeepSqlite');
+    jeepSqlite(window);
     await this.initApp();
     this.initForm();
-    this.checkAuthentication();
   }
 
   ngOnDestroy() {
     console.log('ngOnDestroy');
-    if (this.dbReadySubscription) {
-      this.dbReadySubscription.unsubscribe();
-    }
-    if (this.authSubscription) {
-      this.authSubscription.unsubscribe();
-    }
+    this.destroy$.next();
   }
 
-  async initApp() {
-    console.log('initApp');
+  private async initApp() {
     const loading = await this.loadingCtrl.create({
       message: 'Cargando aplicación...',
       spinner: 'crescent',
@@ -61,8 +57,8 @@ export class AppComponent implements OnInit, OnDestroy {
     try {
       await this.platform.ready();
 
-      const info = await Device.getInfo();
-      this.isWeb = info.platform === 'web';
+      const deviceInfo = await Device.getInfo();
+      this.isWeb = deviceInfo.platform === 'web';
 
       if (this.isWeb) {
         const jeepSqliteElement = document.querySelector('jeep-sqlite');
@@ -74,42 +70,39 @@ export class AppComponent implements OnInit, OnDestroy {
         await this.sqlite.init();
       }
 
-      if (!this.dbReadySubscription) {
-        this.dbReadySubscription = SqliteService.dbReady.subscribe(
-          (isReady) => {
-            this.load = isReady;
-            if (isReady) {
-              console.log('Base de datos lista');
-              loading.dismiss();
-              this.checkAuthentication();
-            }
+      SqliteService.dbReady
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((isReady) => {
+          this.load = isReady;
+          if (isReady) {
+            console.log('Base de datos lista');
+            this.checkAuthentication();
           }
-        );
-      }
+        });
     } catch (error) {
       console.error('Error en la inicialización de la app:', error);
+    } finally {
       await loading.dismiss();
     }
   }
 
   async checkAuthentication() {
-    console.log('checkAuthentication');
     try {
       const isAuthenticated = await this.authService.getAuthenticatedState();
       if (isAuthenticated) {
         console.log('Usuario autenticado, redirigiendo a home...');
-        this.navCtrl.navigateRoot('/home-page'); 
+        this.navCtrl.navigateRoot('/home-page');
       } else {
         console.log('Usuario no autenticado, redirigiendo a login...');
-        this.navCtrl.navigateRoot('/'); 
+        this.navCtrl.navigateRoot('/');
       }
     } catch (error) {
       console.error('Error verificando autenticación:', error);
+      this.showToast();
     }
   }
 
   initForm() {
-    console.log('initForm');
     this.form = this.formBuilder.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(10)]],
@@ -117,23 +110,22 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   get formFields() {
-    console.log('formFields');
     return this.form.controls;
   }
 
   onSubmit() {
-    console.log('onSubmit');
     this.submitted = true;
 
     if (this.form.invalid) {
       return;
     }
-
-    console.log('Formulario enviado:', this.form.value);
   }
-
+  async showToast() {
+    if (this.toast) {
+      await this.toast.present();
+    }
+  }
   onReset() {
-    console.log('onReset');
     this.submitted = false;
     this.form.reset();
   }

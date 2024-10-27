@@ -1,4 +1,5 @@
 <ion-app>
+  <!-- Loading indicator while the app is initializing -->
   <ion-loading
     *ngIf="!load"
     [message]="'Cargando aplicación...'"
@@ -12,4 +13,11 @@
   <div *ngIf="isWeb && !jeepSqliteAvailable">
     <p>Error: El componente jeep-sqlite no está disponible en esta plataforma web.</p>
   </div>
+
+  <ion-toast
+    [message]="'Error verificando autenticación, intenta nuevamente'"
+    color="danger"
+    [duration]="3000"
+    #toastElement> 
+  </ion-toast>
 </ion-app>

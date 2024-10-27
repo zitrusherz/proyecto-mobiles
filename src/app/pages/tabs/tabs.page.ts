@@ -1,6 +1,7 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Subscription } from 'rxjs';
-import { AuthService } from 'src/app/services/auth.service';
+import {Component, OnDestroy, OnInit} from '@angular/core';
+import {Subject} from 'rxjs';
+import {takeUntil} from 'rxjs/operators';
+import {AuthService} from 'src/app/services/auth.service';
 
 @Component({
   selector: 'app-tabs',
@@ -8,20 +9,21 @@ import { AuthService } from 'src/app/services/auth.service';
   styleUrls: ['tabs.page.scss'],
 })
 export class TabsPage implements OnInit, OnDestroy {
-  isTab2Enabled: boolean = false;
-  private subscription: Subscription = new Subscription();
+  isqrEnabled = false;
+  private destroy$ = new Subject<void>();
 
   constructor(private authService: AuthService) {}
 
   ngOnInit() {
-    this.subscription.add(
-      this.authService.isAuthenticated$.subscribe((isAuthenticated) => {
-        this.isTab2Enabled = isAuthenticated;
-      })
-    );
+    this.authService.isAuthenticated$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((isAuthenticated) => {
+        this.isqrEnabled = isAuthenticated;
+      });
   }
 
   ngOnDestroy() {
-    this.subscription.unsubscribe(); // Asegura limpiar la suscripción
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }
