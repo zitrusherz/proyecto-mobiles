@@ -1,0 +1,150 @@
+<meta
+  http-equiv="Content-Security-Policy"
+  content="default-src 'self'; img-src 'self' http://localhost:8100;"
+/>
+
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>Registro RegistrAPP</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="ion-padding">
+  <div class="top-button-container">
+    <ion-button class="top-button" fill="clear" (click)="goToLogin()">Volver a Inicio
+      <ion-icon name="chevron-back-sharp" slot="start"></ion-icon>
+    </ion-button>
+  </div>
+
+  <form [formGroup]="registerForm" (ngSubmit)="registerUser()">
+    <ion-item>
+      <ion-input
+        label="Primer nombre"
+        label-placement="floating"
+        formControlName="primerNombre"
+        placeholder="Introduce tu primer nombre"
+
+        [class.ion-invalid]="registerForm.get('primerNombre')?.invalid && registerForm.get('primerNombre')?.touched"
+        [class.ion-touched]="registerForm.get('primerNombre')?.touched"
+        required
+      ></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-input
+        label="Segundo nombre"
+        label-placement="floating"
+        formControlName="segundoNombre"
+        placeholder="Introduce tu segundo nombre"
+      ></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-input
+        label="Primer apellido"
+        label-placement="floating"
+        formControlName="primerApellido"
+        placeholder="Introduce tu primer apellido"
+        
+        [class.ion-invalid]="registerForm.get('primerApellido')?.invalid && registerForm.get('primerApellido')?.touched"
+        [class.ion-touched]="registerForm.get('primerApellido')?.touched"
+        required
+      ></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-input
+        label="Segundo apellido"
+        label-placement="floating"
+        formControlName="segundoApellido"
+        placeholder="Introduce tu segundo apellido"
+        
+        [class.ion-invalid]="registerForm.get('segundoApellido')?.invalid && registerForm.get('segundoApellido')?.touched"
+        [class.ion-touched]="registerForm.get('segundoApellido')?.touched"
+        required
+      ></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-input
+        label="Correo Institucional"
+        label-placement="stacked"
+        formControlName="email"
+        type="email"
+        placeholder="Ejemplo: usuario@duocuc.cl o usuario@profesor.duoc.cl"
+        helperText="Introduce un correo válido de Duoc"
+        errorText="El correo no es válido"
+        [class.ion-invalid]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched"
+        [class.ion-touched]="registerForm.get('email')?.touched"
+        required
+      ></ion-input>
+    </ion-item>
+
+    <!-- Contraseña -->
+    <ion-item id="password">
+      <ion-input
+        formControlName="password"
+        [type]="passwordInputType"
+        placeholder="Introduce tu contraseña"
+        (ionInput)="validatePassword($event.detail.value ?? '')"
+        helperText="La contraseña debe cumplir con los requisitos"
+        errorText="La contraseña no es válida"
+        [class.ion-invalid]="registerForm.get('password')?.invalid && registerForm.get('password')?.touched"
+        [class.ion-touched]="registerForm.get('password')?.touched"
+      >
+        <ion-input-password-toggle slot="end"></ion-input-password-toggle>
+      </ion-input>
+    </ion-item>
+
+    <!-- Lista de Requisitos de Contraseña -->
+    <div class="password-requirements">
+      <ion-item *ngFor="let requirement of [
+      { key: 'length', label: '10 caracteres' },
+      { key: 'uppercase', label: '1 mayúscula' },
+      { key: 'number', label: '1 número' },
+      { key: 'special', label: '1 carácter especial' }
+    ]">
+        <ion-icon
+          [color]="requirements[requirement.key] ? 'success' : 'danger'"
+          [name]="requirements[requirement.key] ? 'checkmark-circle' : 'close-circle'"
+        ></ion-icon>
+        <ion-label>{{ requirement.label }}</ion-label>
+      </ion-item>
+    </div>
+
+    <!-- Confirmación de Contraseña -->
+    <ion-item class="input-item">
+      <ion-input
+        [type]="passwordInputType"
+        formControlName="confirmPassword"
+        placeholder="Repite tu contraseña"
+        (ngModelChange)="validatePassword(registerForm.value.password)"
+        helperText="Debe coincidir con la contraseña"
+        errorText="Las contraseñas no coinciden"
+        [class.ion-invalid]="registerForm.get('confirmPassword')?.invalid && registerForm.get('confirmPassword')?.touched"
+        [class.ion-touched]="registerForm.get('confirmPassword')?.touched"
+      ></ion-input>
+    </ion-item>
+
+    <ion-text
+      color="danger"
+      *ngIf="registerForm.hasError('passwordsDontMatch') && registerForm.get('confirmPassword')?.touched"
+    >
+      Las contraseñas no coinciden.
+    </ion-text>
+
+    <!-- Código de Recuperación -->
+    <ion-item>
+      <ion-label>Código de recuperación</ion-label>
+      <ion-label>{{ recoveryCode }}</ion-label>
+      <ion-button fill="clear" (click)="copyCode(recoveryCode)">
+        <ion-icon slot="icon-only" name="copy-outline"></ion-icon>
+      </ion-button>
+    </ion-item>
+
+    <ion-button expand="block" type="submit" [disabled]="isLoading || registerForm.invalid">
+  <ion-spinner *ngIf="isLoading"></ion-spinner>
+  <span *ngIf="!isLoading">Registrarse</span>
+</ion-button>
+  </form>
+</ion-content>

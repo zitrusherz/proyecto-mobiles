@@ -1,0 +1,42 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Operaciones QR</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <!-- Profesor: Botón para generar QR -->
+  <div *ngIf="isProfessor; else scanBlock" class="ion-padding">
+    <ion-button expand="block" (click)="generateQRCode()" color="primary">
+      Generar Código QR
+    </ion-button>
+    <ion-card *ngIf="valueToEncode" class="ion-margin-top">
+      <ion-card-header>
+        <ion-card-title>Código QR Generado</ion-card-title>
+      </ion-card-header>
+      <ion-card-content class="ion-text-center">
+        <qr-code [value]="valueToEncode" size="200"></qr-code>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Alumno: Interfaz para escanear QR -->
+  <ng-template #scanBlock>
+    <div class="ion-padding">
+      <ion-button expand="block" (click)="studentAttendance()" [disabled]="!isSupported || isScanning" color="secondary">
+        <ion-spinner *ngIf="isScanning"></ion-spinner>
+        <span *ngIf="!isScanning">Escanear Código QR</span>
+      </ion-button>
+    </div>
+  </ng-template>
+</ion-content>
+
+<!-- Toast para mostrar mensajes de error -->
+<ion-toast
+  *ngIf="errorMessage"
+  message="{{ errorMessage }}"
+  duration="5000"
+  color="danger"
+  position="top"
+  (didDismiss)="errorMessage = ''">
+</ion-toast>

@@ -1,0 +1,45 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>Home</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="ion-padding">
+  <ion-card *ngIf="usuario; else noUser">
+    <ion-card-header>
+      <ion-card-title>Bienvenido</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <h2>
+        Bienvenido {{ usuario.role }}, {{ usuario.primerNombre }} {{ usuario.primerApellido }} {{ usuario.segundoApellido }}.      </h2>
+      <p *ngIf="usuario?.role === 'estudiante'">
+        Puedes escanear el QR del profesor presionando el tab de abajo en el centro con el símbolo de QR.
+      </p>
+      <p *ngIf="usuario?.role === 'profesor'">
+        Puedes generar el código QR presionando el tab de abajo en el centro con el símbolo de QR.
+      </p>
+      
+    </ion-card-content>
+  </ion-card>
+  
+  <ion-button id="logOutButton" expand="block" (click)="logOutAction()" style="max-width:95%">Cerrar sesion</ion-button> 
+  
+  <!-- Muestra un mensaje si no se encuentra al usuario -->
+  <ng-template #noUser>
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Error</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <p>No se encontró un usuario registrado. Por favor, inicia sesión nuevamente.</p>
+      </ion-card-content>
+    </ion-card>
+  </ng-template>
+
+  <ion-tab-bar slot="bottom">
+    <ion-tab-button tab="qr">
+      <ion-icon name="qr-code-outline"></ion-icon>
+      <ion-label>QR</ion-label>
+    </ion-tab-button>
+  </ion-tab-bar>
+</ion-content>
